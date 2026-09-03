@@ -4,7 +4,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -17,12 +16,13 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
 
 class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
-    private val client = OkHttpClient.Builder().build()
+    private val client = OkHttpClient()
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val id = inputData.getString(KEY_ID) ?: return@withContext Result.failure()
@@ -30,7 +30,7 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         val url = inputData.getString(KEY_URL) ?: return@withContext Result.failure()
         val expected = inputData.getString(KEY_SHA256)
         val expectedSize = inputData.getLong(KEY_SIZE, -1L).takeIf { it >= 0 }
-        val item = DownloadStore.items(applicationContext).firstOrNull { it.id == id }
+        DownloadStore.items(applicationContext).firstOrNull { it.id == id }
             ?: return@withContext Result.failure()
 
         setForeground(createForegroundInfo(filename, 0))
@@ -38,10 +38,11 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
         val part = File(applicationContext.cacheDir, "downloads/$id.part").apply { parentFile?.mkdirs() }
         var existing = if (part.exists()) part.length() else 0L
-        val requestBuilder = Request.Builder().url(url)
-        if (existing > 0) requestBuilder.header("Range", "bytes=$existing-")
-        val response = try { client.newCall(requestBuilder.build()).execute() } catch (e: Exception) {
-            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = e.message) }
+        val builder = Request.Builder().url(url)
+        if (existing > 0) builder.header("Range", "bytes=$existing-")
+
+        val response = try { client.newCall(builder.build()).execute() } catch (e: Exception) {
+            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = e.message ?: "Network error") }
             return@withContext Result.retry()
         }
         response.use { r ->
@@ -50,41 +51,40 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
                 return@withContext Result.failure()
             }
             if (r.code == 200 && existing > 0) { part.delete(); existing = 0L }
-            val total = if (r.code == 206) existing + (r.body?.contentLength() ?: -1L) else r.body?.contentLength() ?: -1L
             val body = r.body ?: return@withContext Result.failure()
+            val total = if (r.code == 206) existing + body.contentLength() else body.contentLength()
             body.byteStream().use { input ->
-                part.outputStream().use { out ->
-                    if (existing > 0) {
-                        // Range responses append to the existing partial file.
-                        part.appendBytes(ByteArray(0))
-                    }
-                    copyWithProgress(input, out, existing, total, filename)
+                FileOutputStream(part, existing > 0).use { output ->
+                    copyWithProgress(input, output, existing, total, filename)
                 }
             }
         }
 
+        if (isStopped) return@withContext Result.retry()
         if (expectedSize != null && part.length() != expectedSize) {
-            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Size mismatch: ${part.length()} / $expectedSize bytes") }
+            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Size mismatch") }
             return@withContext Result.failure()
         }
 
         val actual = sha256(part)
-        val verified = expected?.equals(actual, ignoreCase = true) ?: false
-        if (expected != null && !verified) {
+        if (expected != null && !expected.equals(actual, ignoreCase = true)) {
             DownloadStore.update(applicationContext, id) { it.copy(status = "SHA-256 FAILED", verified = false, error = "Expected $expected, got $actual") }
             part.delete()
             return@withContext Result.failure()
         }
 
-        publishToDownloads(part, filename)
-        DownloadStore.update(applicationContext, id) { it.copy(status = if (expected == null) "Downloaded • SHA-256 unavailable" else "Downloaded • SHA-256 PASS", verified = expected?.let { verified }) }
+        try { publishToDownloads(part, filename) } catch (e: Exception) {
+            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = e.message ?: "Unable to save file") }
+            return@withContext Result.failure()
+        }
+        DownloadStore.update(applicationContext, id) { it.copy(status = if (expected == null) "Downloaded • SHA-256 unavailable" else "Downloaded • SHA-256 PASS", verified = expected?.let { true }) }
         Result.success()
     }
 
     private fun copyWithProgress(input: InputStream, output: OutputStream, base: Long, total: Long, filename: String) {
         val buffer = ByteArray(256 * 1024)
         var done = base
-        var lastUpdate = 0L
+        var lastUpdate = base
         while (true) {
             if (isStopped) return
             val read = input.read(buffer)
@@ -109,20 +109,14 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
                 put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                ?: error("Unable to create Downloads entry")
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("Unable to create Downloads entry")
             try {
-                resolver.openOutputStream(uri)?.use { out -> part.inputStream().use { it.copyTo(out) } }
-                values.clear(); values.put(MediaStore.Downloads.IS_PENDING, 0)
-                resolver.update(uri, values, null, null)
-            } catch (e: Exception) {
-                resolver.delete(uri, null, null)
-                throw e
-            }
+                resolver.openOutputStream(uri)?.use { out -> part.inputStream().use { it.copyTo(out) } } ?: error("Unable to open Downloads entry")
+                resolver.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
+            } catch (e: Exception) { resolver.delete(uri, null, null); throw e }
         } else {
             val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            dir.mkdirs()
-            part.copyTo(File(dir, filename), overwrite = true)
+            dir.mkdirs(); part.copyTo(File(dir, filename), overwrite = true)
         }
         part.delete()
     }
@@ -138,22 +132,17 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
     private fun createForegroundInfo(filename: String, progress: Int): ForegroundInfo {
         ensureChannel()
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(filename)
+        return ForegroundInfo(NOTIFICATION_ID, NotificationCompat.Builder(applicationContext, CHANNEL)
+            .setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle(filename)
             .setContentText(if (progress > 0) "Downloading • $progress%" else "Preparing download")
-            .setProgress(100, progress, progress == 0)
-            .setOngoing(true)
-            .build()
-        return ForegroundInfo(NOTIFICATION_ID, notification)
+            .setProgress(100, progress, progress == 0).setOngoing(true).build())
     }
 
     private fun updateNotification(filename: String, progress: Int) {
-        val manager = applicationContext.getSystemService(NotificationManager::class.java)
-        manager.notify(NOTIFICATION_ID, NotificationCompat.Builder(applicationContext, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(filename).setContentText("Downloading • $progress%")
-            .setProgress(100, progress, false).setOngoing(true).build())
+        applicationContext.getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID,
+            NotificationCompat.Builder(applicationContext, CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle(filename).setContentText("Downloading • $progress%")
+                .setProgress(100, progress, false).setOngoing(true).build())
     }
 
     private fun ensureChannel() {
