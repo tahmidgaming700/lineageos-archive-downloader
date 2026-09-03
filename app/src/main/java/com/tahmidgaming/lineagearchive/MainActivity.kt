@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -31,7 +32,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { HOME, DEVICES, BUILDS, DOWNLOADS, SETTINGS }
+private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, SETTINGS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +43,7 @@ private fun ArchiveApp() {
     var devices by remember { mutableStateOf<List<LineageDevice>>(emptyList()) }
     var selected by remember { mutableStateOf<LineageDevice?>(null) }
     var builds by remember { mutableStateOf<List<LineageBuild>>(emptyList()) }
+    var archiveBuilds by remember { mutableStateOf<List<ArchiveBuildSummary>>(emptyList()) }
     var query by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -53,13 +55,27 @@ private fun ArchiveApp() {
             .onFailure { error = it.message ?: "Unable to load devices" }
         loading = false
     }
+
     fun selectDevice(device: LineageDevice) {
-        selected = device; screen = Screen.BUILDS
+        selected = device
+        screen = Screen.BUILDS
         scope.launch {
             loading = true; error = null
             runCatching { LineageRepository.builds(device.model) }
                 .onSuccess { builds = it.sortedByDescending { b -> b.datetime } }
                 .onFailure { error = it.message ?: "Unable to load builds" }
+            loading = false
+        }
+    }
+
+    fun loadArchive() {
+        val device = selected ?: return
+        screen = Screen.ARCHIVE
+        scope.launch {
+            loading = true; error = null
+            runCatching { LineageRepository.archiveBuilds(device.model) }
+                .onSuccess { archiveBuilds = it.sortedByDescending { archiveDate(it.filename) } }
+                .onFailure { error = it.message ?: "Unable to load archive" }
             loading = false
         }
     }
@@ -73,11 +89,35 @@ private fun ArchiveApp() {
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
             when (screen) {
-                Screen.HOME -> HomeContent(DeviceDetector.current(), ::loadDevices, { screen = Screen.DOWNLOADS })
+                Screen.HOME -> HomeContent(DeviceDetector.current(), ::loadDevices, { screen = Screen.DOWNLOADS }, {
+                    if (selected != null) loadArchive() else loadDevices()
+                }, selected)
                 Screen.DEVICES -> DeviceContent(devices, query, { query = it }, loading, error, ::selectDevice)
                 Screen.BUILDS -> BuildContent(selected, builds, loading, error) { file, version ->
                     DownloadHelper.enqueue(context, file, selected?.model ?: "device", version)
                     screen = Screen.DOWNLOADS
+                }
+                Screen.ARCHIVE -> ArchiveContent(selected, archiveBuilds, loading, error) { summary ->
+                    scope.launch {
+                        loading = true; error = null
+                        runCatching { LineageRepository.archiveBuild(summary.id) }
+                            .onSuccess { detail ->
+                                if (detail.url != null) {
+                                    val file = LineageFile(
+                                        filename = detail.filename,
+                                        size = detail.filesize,
+                                        sha256 = detail.sha256,
+                                        url = detail.url
+                                    )
+                                    DownloadHelper.enqueue(context, file, selected?.model ?: summary.device, archiveVersion(detail.filename))
+                                    screen = Screen.DOWNLOADS
+                                } else {
+                                    error = "This archived build is currently not stored online."
+                                }
+                            }
+                            .onFailure { error = it.message ?: "Unable to open archived build" }
+                        loading = false
+                    }
                 }
                 Screen.DOWNLOADS -> DownloadsContent {
                     runCatching { context.startActivity(Intent(Settings.ACTION_DOWNLOADS_SETTINGS)) }
@@ -91,22 +131,33 @@ private fun ArchiveApp() {
 private fun titleFor(screen: Screen) = when (screen) {
     Screen.DEVICES -> "Choose device"
     Screen.BUILDS -> "Available builds"
+    Screen.ARCHIVE -> "Archive"
     Screen.DOWNLOADS -> "Downloads"
     Screen.SETTINGS -> "Settings & About"
     Screen.HOME -> "Home"
 }
 
 @Composable
-private fun HomeContent(detected: DeviceDetector.Info, onChoose: () -> Unit, onDownloads: () -> Unit) {
+private fun HomeContent(
+    detected: DeviceDetector.Info,
+    onChoose: () -> Unit,
+    onDownloads: () -> Unit,
+    onArchive: () -> Unit,
+    selected: LineageDevice?
+) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Find official LineageOS builds", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Browse official builds, download the ZIP, and verify it before using it. This app never flashes or modifies your device.")
+        Text("Find LineageOS builds", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Browse official LineageOS builds or older builds preserved by the TimSchumi archive. This app only downloads files; it never flashes or modifies your device.")
         Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
             Text("Detected Android device", fontWeight = FontWeight.Bold)
             Text("${detected.manufacturer} ${detected.model}")
             Text("Device: ${detected.device} • Product: ${detected.product}")
+            selected?.let { Text("Selected: ${it.name} (${it.model})") }
         } }
         Button(onChoose, Modifier.fillMaxWidth()) { Text("Choose device") }
+        OutlinedButton(onArchive, Modifier.fillMaxWidth(), enabled = selected != null) {
+            Icon(Icons.Default.Archive, null); Spacer(Modifier.width(8.dp)); Text("Browse archived builds")
+        }
         Button(onDownloads, Modifier.fillMaxWidth()) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("Downloads") }
     }
 }
@@ -146,12 +197,32 @@ private fun BuildContent(device: LineageDevice?, builds: List<LineageBuild>, loa
 }
 
 @Composable
+private fun ArchiveContent(device: LineageDevice?, builds: List<ArchiveBuildSummary>, loading: Boolean, error: String?, onDownload: (ArchiveBuildSummary) -> Unit) {
+    Text("Older builds • ${device?.name ?: "device"}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Text("Unofficial archive by TimSchumi. These builds are old/unsupported; verify the SHA-256 and LineageOS signature before use.", style = MaterialTheme.typography.bodyMedium)
+    Spacer(Modifier.height(8.dp))
+    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    if (loading) CircularProgressIndicator()
+    if (!loading && builds.isEmpty() && error == null) Text("No archived builds were found for this device.")
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        items(builds) { build ->
+            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(build.filename, fontWeight = FontWeight.Bold)
+                Text("Device: ${build.device}")
+                Text("${archiveVersion(build.filename)} • ${archiveDate(build.filename)?.let { formatDate(it) } ?: "date unknown"}")
+                Button(onClick = { onDownload(build) }) { Text("Download archived ZIP") }
+            } }
+        }
+    }
+}
+
+@Composable
 private fun DownloadsContent(onOpen: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Downloads", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Downloaded ROM ZIPs are stored in Android's public Downloads area.")
         Button(onOpen) { Text("Open Downloads") }
-        Text("SHA-256 verification will be performed against the checksum supplied by LineageOS in the next downloader milestone.")
+        Text("SHA-256 verification will be added to the downloader workflow. Archived builds should also be signature-verified before use.")
     }
 }
 
@@ -160,12 +231,14 @@ private fun SettingsContent() {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Settings & About", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Version 0.1.0")
-        Text("Official-source downloader only. No flashing, bootloader unlocking, recovery changes, or partition modification.")
-        Text("LineageOS can remove older builds from its official servers. This app does not replace them with third-party ROM archives.")
+        Text("Official LineageOS builds are fetched from LineageOS infrastructure. Older builds can also be fetched from the separate TimSchumi archive.")
+        Text("The TimSchumi archive is unofficial and warns that archived builds may contain security issues and are unsupported by the LineageOS team.")
+        Text("No flashing, bootloader unlocking, recovery changes, or partition modification is performed by this app.")
     }
 }
 
 private fun formatDate(seconds: Long): String = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date(seconds * 1000))
+
 private fun formatBytes(bytes: Long?): String {
     if (bytes == null) return "size unknown"
     if (bytes < 1024) return "$bytes B"
@@ -174,4 +247,24 @@ private fun formatBytes(bytes: Long?): String {
     val mb = kb / 1024.0
     if (mb < 1024) return String.format(Locale.US, "%.1f MiB", mb)
     return String.format(Locale.US, "%.2f GiB", mb / 1024.0)
+}
+
+private fun archiveVersion(filename: String): String? {
+    val match = Regex("lineage-([0-9]+(?:\\.[0-9]+)*)-").find(filename.lowercase())
+    return match?.groupValues?.getOrNull(1)?.let { "LineageOS $it" }
+}
+
+private fun archiveDate(filename: String): Long? {
+    val match = Regex("-(\\d{8,14})-").find(filename)
+    val raw = match?.groupValues?.getOrNull(1) ?: return null
+    return runCatching {
+        val pattern = when (raw.length) {
+            14 -> "yyyyMMddHHmmss"
+            12 -> "yyyyMMddHHmm"
+            10 -> "yyyyMMddHH"
+            8 -> "yyyyMMdd"
+            else -> return null
+        }
+        SimpleDateFormat(pattern, Locale.US).parse(raw)?.time?.div(1000)
+    }.getOrNull()
 }
