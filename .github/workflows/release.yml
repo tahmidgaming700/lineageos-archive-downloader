@@ -1,0 +1,66 @@
+name: Release APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-v1.0.0
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build release APK
+        run: gradle :app:assembleRelease --stacktrace --no-daemon
+
+      - name: Publish v1.0.0 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            echo "v1.0.0 already exists; nothing to publish."
+            exit 0
+          fi
+
+          gh release create v1.0.0 \
+            app/build/outputs/apk/release/app-release.apk \
+            --title "LineageOS Archive Downloader 1.0.0" \
+            --latest \
+            --notes "## LineageOS Archive Downloader 1.0.0
+
+First public release of the downloader/checker.
+
+### Highlights
+- Modern updater-style interface with a Liquid Glass-inspired navigation layer.
+- Light and dark themes with improved contrast and accessibility.
+- Automatic device detection with manual device search.
+- Checks official LineageOS builds and shows version, date, size, Android SDK, patch level and SHA-256.
+- Background downloads with pause/resume when supported by the server.
+- Local SHA-256 verification after download.
+- Clearly separated TimSchumi unofficial archive for older builds.
+- Never flashes, unlocks, modifies recovery or changes partitions.
+
+### Signing
+This public CI release is signed with the standard Android debug key. A future production release can use a private maintainer keystore without changing the app package name."
