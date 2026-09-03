@@ -1,8 +1,6 @@
 package com.tahmidgaming.lineagearchive
 
-import android.content.Intent
 import android.os.Bundle
-import android.app.DownloadManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -55,44 +53,30 @@ private fun ArchiveApp() {
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        runCatching { LineageRepository.devices() }.onSuccess { list ->
-            devices = list
-            selected = DeviceDetector.match(DeviceDetector.current(), list)
-        }
+        runCatching { LineageRepository.devices() }.onSuccess { list -> devices = list; selected = DeviceDetector.match(DeviceDetector.current(), list) }
     }
     LaunchedEffect(screen) {
-        while (screen == Screen.DOWNLOADS) {
-            downloads = DownloadStore.items(context)
-            delay(700)
-        }
+        while (screen == Screen.DOWNLOADS) { downloads = DownloadStore.items(context); delay(700) }
     }
-
     fun loadDevices() = scope.launch {
         loading = true; error = null
-        runCatching { LineageRepository.devices() }.onSuccess { devices = it; screen = Screen.DEVICES }
-            .onFailure { error = it.message ?: "Unable to load devices" }
+        runCatching { LineageRepository.devices() }.onSuccess { devices = it; screen = Screen.DEVICES }.onFailure { error = it.message ?: "Unable to load devices" }
         loading = false
     }
-
     fun selectDevice(device: LineageDevice) {
         selected = device; screen = Screen.BUILDS
         scope.launch {
             loading = true; error = null
-            runCatching { LineageRepository.builds(device.model) }
-                .onSuccess { builds = it.sortedByDescending(LineageBuild::datetime) }
-                .onFailure { error = it.message ?: "Unable to load builds" }
+            runCatching { LineageRepository.builds(device.model) }.onSuccess { builds = it.sortedByDescending(LineageBuild::datetime) }.onFailure { error = it.message ?: "Unable to load builds" }
             loading = false
         }
     }
-
     fun loadArchive() {
         val device = selected ?: return
         screen = Screen.ARCHIVE
         scope.launch {
             loading = true; error = null
-            runCatching { LineageRepository.archiveBuilds(device.model) }
-                .onSuccess { archiveBuilds = it.sortedByDescending { archiveDate(it.filename) ?: 0L } }
-                .onFailure { error = it.message ?: "Unable to load archive" }
+            runCatching { LineageRepository.archiveBuilds(device.model) }.onSuccess { archiveBuilds = it.sortedByDescending { archiveDate(it.filename) ?: 0L } }.onFailure { error = it.message ?: "Unable to load archive" }
             loading = false
         }
     }
@@ -102,7 +86,7 @@ private fun ArchiveApp() {
         topBar = {
             TopAppBar(
                 title = { Text(if (screen == Screen.HOME) "LineageOS Downloader" else titleFor(screen), fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { if (screen != Screen.HOME) IconButton({ screen = Screen.HOME }) { Icon(Icons.Default.ArrowBack, "Back") } },
+                navigationIcon = { if (screen != Screen.HOME) IconButton(onClick = { screen = Screen.HOME }) { Icon(Icons.Default.ArrowBack, "Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
@@ -145,11 +129,7 @@ private fun ArchiveApp() {
 private fun RowScope.NavItem(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, onClick: () -> Unit) {
     NavigationBarItem(selected = selected, onClick = onClick, icon = { Icon(icon, null) }, label = { Text(label) })
 }
-
-private fun titleFor(screen: Screen) = when (screen) {
-    Screen.DEVICES -> "Choose device"; Screen.BUILDS -> "Available builds"; Screen.ARCHIVE -> "Archive"
-    Screen.DOWNLOADS -> "Downloads"; Screen.SETTINGS -> "Settings"; Screen.HOME -> "Home"
-}
+private fun titleFor(screen: Screen) = when (screen) { Screen.DEVICES -> "Choose device"; Screen.BUILDS -> "Available builds"; Screen.ARCHIVE -> "Archive"; Screen.DOWNLOADS -> "Downloads"; Screen.SETTINGS -> "Settings"; Screen.HOME -> "Home" }
 
 @Composable
 private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?, onChoose: () -> Unit, onDownloads: () -> Unit, onArchive: () -> Unit) {
@@ -159,21 +139,19 @@ private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?,
         Text("A clean, downloader-only way to discover LineageOS builds and preserved older releases.", style = MaterialTheme.typography.bodyLarge)
         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .72f))) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("Detected device", fontWeight = FontWeight.Bold)
-                Text("${detected.manufacturer} ${detected.model}")
-                Text("${detected.device} • ${detected.product}")
+                Text("Detected device", fontWeight = FontWeight.Bold); Text("${detected.manufacturer} ${detected.model}"); Text("${detected.device} • ${detected.product}")
                 selected?.let { Text("Matched: ${it.name} (${it.model})", color = MaterialTheme.colorScheme.primary) }
             }
         }
-        Button(onClick = onChoose, Modifier.fillMaxWidth()) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device") }
-        OutlinedButton(onClick = onArchive, Modifier.fillMaxWidth(), enabled = selected != null) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(8.dp)); Text("Browse older builds") }
-        OutlinedButton(onClick = onDownloads, Modifier.fillMaxWidth()) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("View downloads") }
+        Button(onClick = onChoose, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device") }
+        OutlinedButton(onClick = onArchive, modifier = Modifier.fillMaxWidth(), enabled = selected != null) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(8.dp)); Text("Browse older builds") }
+        OutlinedButton(onClick = onDownloads, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("View downloads") }
     }
 }
 
 @Composable
 private fun DeviceContent(devices: List<LineageDevice>, query: String, onQuery: (String) -> Unit, loading: Boolean, error: String?, onSelect: (LineageDevice) -> Unit) {
-    OutlinedTextField(query, onQuery, Modifier.fillMaxWidth(), placeholder = { Text("Manufacturer, model or codename") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
+    OutlinedTextField(value = query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Manufacturer, model or codename") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
     Spacer(Modifier.height(10.dp)); error?.let { Text(it, color = MaterialTheme.colorScheme.error) }; if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
     LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         items(devices.filter { query.isBlank() || it.name.contains(query, true) || it.model.contains(query, true) || it.oem.contains(query, true) }) { device ->
@@ -189,10 +167,8 @@ private fun BuildContent(device: LineageDevice?, builds: List<LineageBuild>, loa
     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         items(builds) { build -> build.files.forEach { file ->
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .76f))) { Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("LineageOS ${build.version ?: "unknown"}", fontWeight = FontWeight.Bold); Text(file.filename)
-                Text("${formatDate(build.datetime)} • ${formatBytes(file.size)}")
-                Text("SHA-256  ${file.sha256 ?: "not supplied"}", style = MaterialTheme.typography.bodySmall)
-                Text("Android ${file.os_sdk_level ?: "?"} • Patch ${file.os_patch_level ?: "?"}")
+                Text("LineageOS ${build.version ?: "unknown"}", fontWeight = FontWeight.Bold); Text(file.filename); Text("${formatDate(build.datetime)} • ${formatBytes(file.size)}")
+                Text("SHA-256  ${file.sha256 ?: "not supplied"}", style = MaterialTheme.typography.bodySmall); Text("Android ${file.os_sdk_level ?: "?"} • Patch ${file.os_patch_level ?: "?"}")
                 Button(onClick = { onDownload(file, build.version) }, enabled = file.url != null) { Text(if (file.url != null) "Download ZIP" else "URL unavailable") }
             } }
         } }
@@ -216,7 +192,8 @@ private fun SettingsContent() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(8.dp)); Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .72f))) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("LineageOS Archive Downloader", fontWeight = FontWeight.Bold); Text("Version 0.2.0"); Text("Official builds come from LineageOS infrastructure. Older builds come from the separate TimSchumi archive.")
+            Text("LineageOS Archive Downloader", fontWeight = FontWeight.Bold); Text("Version 0.2.0")
+            Text("Official builds come from LineageOS infrastructure. Older builds come from the separate TimSchumi archive.")
             Text("SHA-256 is checked after every downloaded file when a trusted digest is supplied. Signature verification is still recommended for ROM authenticity.")
             Text("This app never unlocks the bootloader, flashes a ROM, changes recovery, or modifies partitions.")
         } }
