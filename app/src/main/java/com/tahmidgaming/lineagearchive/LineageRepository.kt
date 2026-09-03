@@ -3,7 +3,7 @@ package com.tahmidgaming.lineagearchive
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
-import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 object LineageRepository {
     private val json = Json { ignoreUnknownKeys = true }
@@ -29,9 +29,6 @@ object LineageRepository {
 
     suspend fun devices(): List<LineageDevice> = deviceApi.devices()
     suspend fun builds(device: String): List<LineageBuild> = buildApi.builds(device)
-
-    suspend fun archiveBuilds(device: String): List<ArchiveBuildSummary> =
-        archiveApi.builds().filter { it.device.equals(device, ignoreCase = true) }
-
+    suspend fun archiveBuilds(device: String): List<ArchiveBuildSummary> = archiveApi.builds().filter { it.device.equals(device, ignoreCase = true) }
     suspend fun archiveBuild(id: Long): ArchiveBuildDetail = archiveApi.build(id)
 }
