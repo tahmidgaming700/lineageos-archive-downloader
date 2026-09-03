@@ -12,6 +12,7 @@ object DeviceDetector {
 
     fun current(): Info = Info()
 
+    // Prefer exact codenames first, then product identifiers, then a safe OEM/model fallback.
     fun match(info: Info, devices: List<LineageDevice>): LineageDevice? {
         val device = devices.firstOrNull { it.model.equals(info.device, ignoreCase = true) }
         if (device != null) return device
