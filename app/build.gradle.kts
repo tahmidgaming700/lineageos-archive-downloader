@@ -13,8 +13,17 @@ android {
         applicationId = "com.tahmidgaming.lineagearchive"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 100
+        versionName = "1.0.0"
+    }
+
+    // V1.0.0 is built by CI with the standard debug key until a private
+    // production signing key is intentionally configured by the maintainer.
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
