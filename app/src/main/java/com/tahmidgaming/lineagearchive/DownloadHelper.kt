@@ -7,7 +7,7 @@ import android.os.Environment
 
 object DownloadHelper {
     fun enqueue(context: Context, file: LineageFile, device: String, version: String?) {
-        val url = file.url ?: "https://download.lineageos.org/stable/${device}/${file.filename}"
+        val url = file.url ?: return
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle(file.filename)
             .setDescription("LineageOS ${version ?: "build"} • $device")
