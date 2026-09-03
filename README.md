@@ -41,7 +41,7 @@ SHA-256 proves that the downloaded bytes match the expected digest. For stronger
 
 ## Build and release
 
-GitHub Actions builds the debug APK on pushes to `main` and pull requests. Version `1.0.0` is also assembled as a release APK and published to the GitHub Releases tab by the release workflow.
+GitHub Actions builds the debug APK on pushes to `main` and pull requests. Version `1.0.0` is also assembled as a release APK and published to the GitHub Releases tab by the verified build workflow.
 
 The 1.0.0 CI release uses the standard debug signing key because no private production keystore is stored in the public repository. This keeps the source buildable without exposing a private signing key.
 
