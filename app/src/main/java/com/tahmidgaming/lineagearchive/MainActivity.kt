@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
@@ -29,13 +28,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -198,7 +196,7 @@ private fun ArchiveApp() {
                                         loading = false
                                     }
                                 },
-                                onChoose = loadDevices,
+                                onChoose = { loadDevices() },
                                 onDownloads = { screen = Screen.DOWNLOADS },
                                 onArchive = ::loadArchive
                             )
@@ -394,11 +392,7 @@ private fun HomeContent(
                 }
             }
         }
-        error?.let { message ->
-            item {
-                ErrorCard(message, onRefresh)
-            }
-        }
+        error?.let { message -> item { ErrorCard(message, onRefresh) } }
         item {
             Button(
                 onClick = onChoose,
@@ -563,11 +557,8 @@ private fun DownloadsScreen(context: android.content.Context, downloads: List<Do
                             } else if (item.status == "Paused") {
                                 Button(onClick = { DownloadHelper.resume(context, item) }, shape = RoundedCornerShape(14.dp)) { Text("Resume") }
                             }
-                            if (item.verified == true) {
-                                StatusPill("SHA-256 PASS", MaterialTheme.colorScheme.tertiary)
-                            } else if (item.verified == false) {
-                                StatusPill("SHA-256 FAILED", MaterialTheme.colorScheme.error)
-                            }
+                            if (item.verified == true) StatusPill("SHA-256 PASS", MaterialTheme.colorScheme.tertiary)
+                            else if (item.verified == false) StatusPill("SHA-256 FAILED", MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -616,23 +607,22 @@ private fun GlassCard(onClick: (() -> Unit)? = null, content: @Composable Column
     val modifier = Modifier
         .fillMaxWidth()
         .border(1.dp, if (dark) Color.White.copy(alpha = .09f) else Color.White.copy(alpha = .85f), RoundedCornerShape(24.dp))
+    val surfaceColor = if (dark) Color(0xD91B1E25) else Color(0xEAFBFCFF)
     if (onClick != null) {
         Card(
             onClick = onClick,
             modifier = modifier,
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = if (dark) Color(0xD91B1E25) else Color(0xEAFBFCFF)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            content = { Column(Modifier.padding(17.dp), content = content) }
-        )
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) { Column(Modifier.padding(17.dp), content = content) }
     } else {
         Card(
             modifier = modifier,
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = if (dark) Color(0xD91B1E25) else Color(0xEAFBFCFF)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            content = { Column(Modifier.padding(17.dp), content = content) }
-        )
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) { Column(Modifier.padding(17.dp), content = content) }
     }
 }
 
