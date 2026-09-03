@@ -30,6 +30,26 @@ data class LineageFile(
     val os_sdk_level: Int? = null
 )
 
+@Serializable
+data class ArchiveBuildSummary(
+    val id: Long,
+    val filename: String,
+    val device: String
+)
+
+@Serializable
+data class ArchiveBuildDetail(
+    val id: Long,
+    val filename: String,
+    val filesize: Long? = null,
+    val md5: String? = null,
+    val sha1: String? = null,
+    val sha256: String? = null,
+    val sha512: String? = null,
+    val url: String? = null,
+    val path: String? = null
+)
+
 interface LineageDeviceApi {
     @GET("updater/devices.json")
     suspend fun devices(): List<LineageDevice>
@@ -38,4 +58,12 @@ interface LineageDeviceApi {
 interface LineageBuildApi {
     @GET("api/v2/devices/{device}/builds")
     suspend fun builds(@Path("device") device: String): List<LineageBuild>
+}
+
+interface ArchiveBuildApi {
+    @GET("api/builds")
+    suspend fun builds(): List<ArchiveBuildSummary>
+
+    @GET("api/builds/{id}")
+    suspend fun build(@Path("id") id: Long): ArchiveBuildDetail
 }
