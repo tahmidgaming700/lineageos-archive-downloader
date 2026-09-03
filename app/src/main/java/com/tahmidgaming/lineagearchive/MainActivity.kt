@@ -1,16 +1,16 @@
 package com.tahmidgaming.lineagearchive
 
+import android.app.DownloadManager
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -74,7 +74,7 @@ private fun ArchiveApp() {
         scope.launch {
             loading = true; error = null
             runCatching { LineageRepository.archiveBuilds(device.model) }
-                .onSuccess { archiveBuilds = it.sortedByDescending { archiveDate(it.filename) } }
+                .onSuccess { archiveBuilds = it.sortedByDescending { archiveDate(it.filename) ?: 0L } }
                 .onFailure { error = it.message ?: "Unable to load archive" }
             loading = false
         }
@@ -83,8 +83,8 @@ private fun ArchiveApp() {
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(if (screen == Screen.HOME) "LineageOS Archive Downloader" else titleFor(screen)) },
-            navigationIcon = { if (screen != Screen.HOME) IconButton({ screen = Screen.HOME }) { Icon(Icons.Default.ArrowBack, "Back") } },
-            actions = { if (screen == Screen.HOME) IconButton({ screen = Screen.SETTINGS }) { Icon(Icons.Default.Settings, "Settings") } }
+            navigationIcon = { if (screen != Screen.HOME) IconButton(onClick = { screen = Screen.HOME }) { Icon(Icons.Default.ArrowBack, "Back") } },
+            actions = { if (screen == Screen.HOME) IconButton(onClick = { screen = Screen.SETTINGS }) { Icon(Icons.Default.Settings, "Settings") } }
         )
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
@@ -120,7 +120,7 @@ private fun ArchiveApp() {
                     }
                 }
                 Screen.DOWNLOADS -> DownloadsContent {
-                    runCatching { context.startActivity(Intent(Settings.ACTION_DOWNLOADS_SETTINGS)) }
+                    runCatching { context.startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)) }
                 }
                 Screen.SETTINGS -> SettingsContent()
             }
@@ -154,17 +154,17 @@ private fun HomeContent(
             Text("Device: ${detected.device} • Product: ${detected.product}")
             selected?.let { Text("Selected: ${it.name} (${it.model})") }
         } }
-        Button(onChoose, Modifier.fillMaxWidth()) { Text("Choose device") }
-        OutlinedButton(onArchive, Modifier.fillMaxWidth(), enabled = selected != null) {
+        Button(onClick = onChoose, modifier = Modifier.fillMaxWidth()) { Text("Choose device") }
+        OutlinedButton(onClick = onArchive, modifier = Modifier.fillMaxWidth(), enabled = selected != null) {
             Icon(Icons.Default.Archive, null); Spacer(Modifier.width(8.dp)); Text("Browse archived builds")
         }
-        Button(onDownloads, Modifier.fillMaxWidth()) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("Downloads") }
+        Button(onClick = onDownloads, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("Downloads") }
     }
 }
 
 @Composable
 private fun DeviceContent(devices: List<LineageDevice>, query: String, onQuery: (String) -> Unit, loading: Boolean, error: String?, onSelect: (LineageDevice) -> Unit) {
-    OutlinedTextField(query, onQuery, Modifier.fillMaxWidth(), placeholder = { Text("Search manufacturer, model or codename") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
+    OutlinedTextField(value = query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Search manufacturer, model or codename") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
     Spacer(Modifier.height(10.dp))
     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     if (loading) CircularProgressIndicator()
@@ -209,7 +209,7 @@ private fun ArchiveContent(device: LineageDevice?, builds: List<ArchiveBuildSumm
             Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(build.filename, fontWeight = FontWeight.Bold)
                 Text("Device: ${build.device}")
-                Text("${archiveVersion(build.filename)} • ${archiveDate(build.filename)?.let { formatDate(it) } ?: "date unknown"}")
+                Text("${archiveVersion(build.filename) ?: "LineageOS"} • ${archiveDate(build.filename)?.let { formatDate(it) } ?: "date unknown"}")
                 Button(onClick = { onDownload(build) }) { Text("Download archived ZIP") }
             } }
         }
@@ -221,7 +221,7 @@ private fun DownloadsContent(onOpen: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Downloads", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Downloaded ROM ZIPs are stored in Android's public Downloads area.")
-        Button(onOpen) { Text("Open Downloads") }
+        Button(onClick = onOpen) { Text("Open Downloads") }
         Text("SHA-256 verification will be added to the downloader workflow. Archived builds should also be signature-verified before use.")
     }
 }
