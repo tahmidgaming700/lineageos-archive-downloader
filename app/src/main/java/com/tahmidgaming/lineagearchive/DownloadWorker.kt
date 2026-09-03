@@ -30,17 +30,15 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         val url = inputData.getString(KEY_URL) ?: return@withContext Result.failure()
         val expected = inputData.getString(KEY_SHA256)
         val expectedSize = inputData.getLong(KEY_SIZE, -1L).takeIf { it >= 0 }
-        DownloadStore.items(applicationContext).firstOrNull { it.id == id }
-            ?: return@withContext Result.failure()
+        if (DownloadStore.items(applicationContext).none { it.id == id }) return@withContext Result.failure()
 
         setForeground(createForegroundInfo(filename, 0))
-        DownloadStore.update(applicationContext, id) { it.copy(status = "Downloading", error = null) }
+        DownloadStore.update(applicationContext, id) { it.copy(status = "Downloading • 0%", error = null) }
 
         val part = File(applicationContext.cacheDir, "downloads/$id.part").apply { parentFile?.mkdirs() }
         var existing = if (part.exists()) part.length() else 0L
         val builder = Request.Builder().url(url)
         if (existing > 0) builder.header("Range", "bytes=$existing-")
-
         val response = try { client.newCall(builder.build()).execute() } catch (e: Exception) {
             DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = e.message ?: "Network error") }
             return@withContext Result.retry()
@@ -55,7 +53,7 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             val total = if (r.code == 206) existing + body.contentLength() else body.contentLength()
             body.byteStream().use { input ->
                 FileOutputStream(part, existing > 0).use { output ->
-                    copyWithProgress(input, output, existing, total, filename)
+                    copyWithProgress(input, output, existing, total, filename, id)
                 }
             }
         }
@@ -81,7 +79,7 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         Result.success()
     }
 
-    private fun copyWithProgress(input: InputStream, output: OutputStream, base: Long, total: Long, filename: String) {
+    private fun copyWithProgress(input: InputStream, output: OutputStream, base: Long, total: Long, filename: String, id: String) {
         val buffer = ByteArray(256 * 1024)
         var done = base
         var lastUpdate = base
@@ -94,6 +92,7 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             if (done - lastUpdate >= 1024 * 1024 || (total > 0 && done == total)) {
                 val percent = if (total > 0) ((done * 100) / total).toInt().coerceIn(0, 100) else 0
                 setProgressAsync(androidx.work.workDataOf("bytes" to done, "total" to total, "percent" to percent))
+                DownloadStore.update(applicationContext, id) { it.copy(status = "Downloading • $percent%") }
                 updateNotification(filename, percent)
                 lastUpdate = done
             }
