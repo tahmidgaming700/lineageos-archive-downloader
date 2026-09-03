@@ -56,28 +56,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view v1.0.0 >/dev/null 2>&1; then
-            echo "v1.0.0 already exists; release step is complete."
-            exit 0
+            echo "v1.0.0 already exists; nothing to publish."
+          else
+            gh release create v1.0.0 app/build/outputs/apk/release/app-release.apk --title "LineageOS Archive Downloader 1.0.0" --latest --generate-notes
           fi
-
-          gh release create v1.0.0 \
-            app/build/outputs/apk/release/app-release.apk \
-            --title "LineageOS Archive Downloader 1.0.0" \
-            --latest \
-            --notes "## LineageOS Archive Downloader 1.0.0
-
-First public release of the downloader/checker.
-
-### Highlights
-- Beautiful updater-style interface inspired by modern translucent system UI.
-- Polished Liquid Glass-inspired navigation layer adapted for Android.
-- Correct light and dark themes with strong text contrast.
-- Automatic device detection with manual device search.
-- Checks official LineageOS builds and displays version, date, size, Android SDK, patch level and SHA-256.
-- Background downloads with pause/resume when supported by the server.
-- Local SHA-256 verification after every download when a trusted digest is supplied.
-- Clearly separated TimSchumi unofficial archive for older builds.
-- Never unlocks, flashes, changes recovery or modifies partitions.
-
-### Signing
-This 1.0.0 public CI build uses the standard Android debug signing key because no private production keystore is stored in the public repository."
