@@ -50,13 +50,13 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: gradle :app:assembleRelease --stacktrace --no-daemon
 
-      - name: Publish GitHub Release 1.0.0
+      - name: Publish GitHub Release 1.0.1
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.0.0 >/dev/null 2>&1; then
-            echo "v1.0.0 already exists; nothing to publish."
+          if gh release view v1.0.1 >/dev/null 2>&1; then
+            echo "v1.0.1 already exists; nothing to publish."
           else
-            gh release create v1.0.0 app/build/outputs/apk/release/app-release.apk --title "LineageOS Archive Downloader 1.0.0" --latest --generate-notes
+            gh release create v1.0.1 app/build/outputs/apk/release/app-release.apk --title "LineageOS Archive Downloader 1.0.1" --latest --generate-notes
           fi
