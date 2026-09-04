@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,7 +42,19 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ArchiveTheme { ArchiveApp() } }
+        setContent {
+            val context = LocalContext.current
+            var themeMode by remember { mutableStateOf(ThemePreferences.get(context)) }
+            ArchiveTheme(themeMode) {
+                ArchiveApp(
+                    themeMode = themeMode,
+                    onThemeModeChange = { mode ->
+                        themeMode = mode
+                        ThemePreferences.set(context, mode)
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -51,7 +62,10 @@ private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, SETTINGS 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ArchiveApp() {
+private fun ArchiveApp(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val detected = remember { DeviceDetector.current() }
@@ -230,7 +244,7 @@ private fun ArchiveApp() {
                         }
                     }
                     Screen.DOWNLOADS -> DownloadsScreen(context, downloads)
-                    Screen.SETTINGS -> SettingsContent()
+                    Screen.SETTINGS -> SettingsContent(themeMode, onThemeModeChange)
                 }
             }
         }
@@ -239,7 +253,7 @@ private fun ArchiveApp() {
 
 @Composable
 private fun FloatingNavigationBar(screen: Screen, onSelect: (Screen) -> Unit) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalArchiveDarkTheme.current
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -568,11 +582,27 @@ private fun DownloadsScreen(context: android.content.Context, downloads: List<Do
 }
 
 @Composable
-private fun SettingsContent() {
+private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 18.dp, bottom = 24.dp)) {
         item {
             Text("Settings & About", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text("A downloader and verifier — never a flasher.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        item {
+            GlassCard {
+                Text("Appearance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text("Choose how the app looks. Your choice is saved on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ThemeChoice("System", ThemeMode.SYSTEM, themeMode, onThemeModeChange, Modifier.weight(1f))
+                    ThemeChoice("Light", ThemeMode.LIGHT, themeMode, onThemeModeChange, Modifier.weight(1f))
+                    ThemeChoice("Dark", ThemeMode.DARK, themeMode, onThemeModeChange, Modifier.weight(1f))
+                }
+            }
         }
         item {
             GlassCard {
@@ -602,8 +632,34 @@ private fun SettingsContent() {
 }
 
 @Composable
+private fun ThemeChoice(
+    label: String,
+    mode: ThemeMode,
+    selectedMode: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val selected = mode == selectedMode
+    if (selected) {
+        Button(
+            onClick = { onSelect(mode) },
+            modifier = modifier.height(48.dp),
+            shape = RoundedCornerShape(15.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp)
+        ) { Text(label, maxLines = 1) }
+    } else {
+        OutlinedButton(
+            onClick = { onSelect(mode) },
+            modifier = modifier.height(48.dp),
+            shape = RoundedCornerShape(15.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp)
+        ) { Text(label, maxLines = 1) }
+    }
+}
+
+@Composable
 private fun GlassCard(onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalArchiveDarkTheme.current
     val modifier = Modifier
         .fillMaxWidth()
         .border(1.dp, if (dark) Color.White.copy(alpha = .09f) else Color.White.copy(alpha = .85f), RoundedCornerShape(24.dp))
