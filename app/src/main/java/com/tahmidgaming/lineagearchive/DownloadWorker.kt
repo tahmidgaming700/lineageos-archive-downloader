@@ -115,7 +115,8 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             } catch (e: Exception) { resolver.delete(uri, null, null); throw e }
         } else {
             val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            dir.mkdirs(); part.copyTo(File(dir, filename), overwrite = true)
+            dir.mkdirs()
+            part.copyTo(File(dir, filename), overwrite = true)
         }
         part.delete()
     }
@@ -138,14 +139,16 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
     }
 
     private fun updateNotification(filename: String, progress: Int) {
-        applicationContext.getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID,
+        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID,
             NotificationCompat.Builder(applicationContext, CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download)
                 .setContentTitle(filename).setContentText("Downloading • $progress%")
                 .setProgress(100, progress, false).setOngoing(true).build())
     }
 
     private fun ensureChannel() {
-        if (Build.VERSION.SDK_INT >= 26) applicationContext.getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= 26) applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
+            .let { it as NotificationManager }
             .createNotificationChannel(NotificationChannel(CHANNEL, "ROM downloads", NotificationManager.IMPORTANCE_LOW))
     }
 
