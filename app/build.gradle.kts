@@ -11,14 +11,12 @@ android {
 
     defaultConfig {
         applicationId = "com.tahmidgaming.lineagearchive"
-        minSdk = 26
+        minSdk = 21
         targetSdk = 35
-        versionCode = 100
-        versionName = "1.0.0"
+        versionCode = 101
+        versionName = "1.0.1"
     }
 
-    // V1.0.0 is built by CI with the standard debug key until a private
-    // production signing key is intentionally configured by the maintainer.
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
@@ -52,7 +50,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.work:work-runtime-ktx:2.7.1")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
