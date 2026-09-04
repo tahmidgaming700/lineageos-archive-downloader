@@ -1,11 +1,40 @@
 package com.tahmidgaming.lineagearchive
 
+import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+
+enum class ThemeMode {
+    SYSTEM, LIGHT, DARK
+}
+
+object ThemePreferences {
+    private const val PREFS = "appearance_preferences"
+    private const val KEY_THEME = "theme_mode"
+
+    fun get(context: Context): ThemeMode {
+        return when (context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_THEME, ThemeMode.SYSTEM.name)) {
+            ThemeMode.LIGHT.name -> ThemeMode.LIGHT
+            ThemeMode.DARK.name -> ThemeMode.DARK
+            else -> ThemeMode.SYSTEM
+        }
+    }
+
+    fun set(context: Context, mode: ThemeMode) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_THEME, mode.name)
+            .apply()
+    }
+}
+
+val LocalArchiveDarkTheme = compositionLocalOf { false }
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF007AFF),
@@ -50,9 +79,20 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
-fun ArchiveTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
-        content = content
-    )
+fun ArchiveTheme(
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    content: @Composable () -> Unit
+) {
+    val dark = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
+    CompositionLocalProvider(LocalArchiveDarkTheme provides dark) {
+        MaterialTheme(
+            colorScheme = if (dark) DarkColors else LightColors,
+            content = content
+        )
+    }
 }
