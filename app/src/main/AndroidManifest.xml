@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <application
+        android:name=".ArchiveApplication"
         android:allowBackup="true"
         android:label="LineageOS Archive Downloader"
         android:supportsRtl="true"
