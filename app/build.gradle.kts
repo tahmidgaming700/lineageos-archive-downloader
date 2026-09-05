@@ -11,10 +11,11 @@ android {
 
     defaultConfig {
         applicationId = "com.tahmidgaming.lineagearchive"
+        // Android 6.0 (API 23) compatibility floor: Samsung TouchWiz through Android 16.
         minSdk = 23
         targetSdk = 36
-        versionCode = 104
-        versionName = "1.0.4"
+        versionCode = 1031
+        versionName = "1.0.31"
     }
 
     buildTypes {
