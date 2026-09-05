@@ -13,7 +13,6 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
@@ -22,7 +21,7 @@ import java.io.OutputStream
 import java.security.MessageDigest
 
 class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
-    private val client = OkHttpClient()
+    private val client = TlsClient.get(appContext)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val id = inputData.getString(KEY_ID) ?: return@withContext Result.failure()
