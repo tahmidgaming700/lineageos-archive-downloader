@@ -31,9 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -103,7 +104,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     LaunchedEffect(screen) {
         while (screen == Screen.DOWNLOADS) {
             downloads = DownloadStore.items(context)
-            delay(700)
+            delay(500)
         }
     }
 
@@ -141,9 +142,13 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(
+        Modifier.fillMaxSize().background(
             Brush.verticalGradient(
-                listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.background)
+                listOf(
+                    MaterialTheme.colorScheme.background,
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    MaterialTheme.colorScheme.background
+                )
             )
         )
     ) {
@@ -158,7 +163,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = MaterialTheme.colorScheme.onBackground)
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
             },
@@ -179,12 +184,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp)) {
                 when (screen) {
                     Screen.HOME -> if (initialChecking) CheckingContent() else HomeContent(
-                        detected = detected,
-                        selected = selected,
-                        latest = builds.firstOrNull()?.files?.firstOrNull(),
-                        latestBuild = builds.firstOrNull(),
-                        loading = loading,
-                        error = error,
+                        detected, selected, builds.firstOrNull()?.files?.firstOrNull(), builds.firstOrNull(), loading, error,
                         onRefresh = {
                             scope.launch {
                                 loading = true
@@ -229,14 +229,14 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
 private fun FloatingNavigationBar(screen: Screen, onSelect: (Screen) -> Unit) {
     val dark = LocalArchiveDarkTheme.current
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
         shape = RoundedCornerShape(30.dp),
         color = if (dark) Color(0xE91B1E26) else Color(0xEAFBFCFF),
         tonalElevation = 4.dp,
         shadowElevation = 12.dp,
         border = BorderStroke(1.dp, if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .90f))
     ) {
-        NavigationBar(modifier = Modifier.height(68.dp), containerColor = Color.Transparent, tonalElevation = 0.dp) {
+        NavigationBar(Modifier.height(68.dp), containerColor = Color.Transparent, tonalElevation = 0.dp) {
             NavItem("Home", Icons.Default.Home, screen == Screen.HOME) { onSelect(Screen.HOME) }
             NavItem("Archive", Icons.Default.Archive, screen == Screen.ARCHIVE) { onSelect(Screen.ARCHIVE) }
             NavItem("Downloads", Icons.Default.Download, screen == Screen.DOWNLOADS) { onSelect(Screen.DOWNLOADS) }
@@ -248,10 +248,7 @@ private fun FloatingNavigationBar(screen: Screen, onSelect: (Screen) -> Unit) {
 @Composable
 private fun RowScope.NavItem(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, onClick: () -> Unit) {
     NavigationBarItem(
-        selected = selected,
-        onClick = onClick,
-        icon = { Icon(icon, null) },
-        label = { Text(label, maxLines = 1) },
+        selected = selected, onClick = onClick, icon = { Icon(icon, null) }, label = { Text(label, maxLines = 1) },
         colors = NavigationBarItemDefaults.colors(
             indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = .15f),
             selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -266,7 +263,7 @@ private fun titleFor(screen: Screen) = when (screen) {
     Screen.DEVICES -> "Choose device"
     Screen.BUILDS -> "Available builds"
     Screen.ARCHIVE -> "Archive"
-    Screen.DOWNLOADS -> "Downloads"
+    Screen.DOWNLOADS -> "Software Update"
     Screen.SETTINGS -> "Settings"
     Screen.HOME -> "LineageOS Downloader"
 }
@@ -274,14 +271,14 @@ private fun titleFor(screen: Screen) = when (screen) {
 @Composable
 private fun CheckingContent() {
     Column(Modifier.fillMaxSize().padding(bottom = 70.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Surface(modifier = Modifier.size(190.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surface.copy(alpha = .72f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .55f)), shadowElevation = 10.dp) {
+        Surface(Modifier.size(190.dp), CircleShape, color = MaterialTheme.colorScheme.surface.copy(alpha = .72f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .55f)), shadowElevation = 10.dp) {
             Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(modifier = Modifier.size(150.dp), strokeWidth = 8.dp, trackColor = MaterialTheme.colorScheme.surfaceVariant)
+                CircularProgressIndicator(Modifier.size(150.dp), strokeWidth = 8.dp, trackColor = MaterialTheme.colorScheme.surfaceVariant)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.CloudDownload, null, Modifier.size(34.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(8.dp))
                     Text("LineageOS", fontWeight = FontWeight.Bold)
-                    Text("1.0.1", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("1.0.2", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -307,7 +304,7 @@ private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?,
         item {
             GlassCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Default.PhoneAndroid, null, modifier = Modifier.padding(12.dp), tint = MaterialTheme.colorScheme.primary) }
+                    Surface(CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Default.PhoneAndroid, null, Modifier.padding(12.dp), tint = MaterialTheme.colorScheme.primary) }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Your device", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -316,7 +313,8 @@ private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?,
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                if (selected != null) StatusPill("Matched: ${selected.name} • ${selected.model}", MaterialTheme.colorScheme.primary) else StatusPill("Select a supported device", MaterialTheme.colorScheme.onSurfaceVariant)
+                if (selected != null) StatusPill("Matched: ${selected.name} • ${selected.model}", MaterialTheme.colorScheme.primary)
+                else StatusPill("Select a supported device", MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item {
@@ -338,14 +336,14 @@ private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?,
         }
         error?.let { message -> item { ErrorCard(message, onRefresh) } }
         item {
-            Button(onClick = onChoose, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp)) {
+            Button(onClick = onChoose, Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp)) {
                 Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device", fontWeight = FontWeight.SemiBold)
             }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }
-                OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") }
+                OutlinedButton(onClick = onArchive, enabled = selected != null, Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }
+                OutlinedButton(onClick = onDownloads, Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") }
             }
         }
     }
@@ -355,7 +353,7 @@ private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?,
 private fun DeviceContent(devices: List<LineageDevice>, query: String, onQuery: (String) -> Unit, loading: Boolean, error: String?, onSelect: (LineageDevice) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(value = query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Manufacturer, model or codename") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true, shape = RoundedCornerShape(18.dp))
+        OutlinedTextField(value = query, onValueChange = onQuery, Modifier.fillMaxWidth(), placeholder = { Text("Manufacturer, model or codename") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true, shape = RoundedCornerShape(18.dp))
         Spacer(Modifier.height(10.dp))
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -363,9 +361,12 @@ private fun DeviceContent(devices: List<LineageDevice>, query: String, onQuery: 
             items(devices.filter { query.isBlank() || it.name.contains(query, true) || it.model.contains(query, true) || it.oem.contains(query, true) }) { device ->
                 GlassCard(onClick = { onSelect(device) }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Default.PhoneAndroid, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.primary) }
+                        Surface(CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Default.PhoneAndroid, null, Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.primary) }
                         Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) { Text(device.name, fontWeight = FontWeight.SemiBold); Text("${device.oem} • ${device.model}", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Column(Modifier.weight(1f)) {
+                            Text(device.name, fontWeight = FontWeight.SemiBold)
+                            Text("${device.oem} • ${device.model}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
@@ -378,13 +379,16 @@ private fun BuildContent(device: LineageDevice?, builds: List<LineageBuild>, loa
     Column(Modifier.fillMaxSize()) {
         Spacer(Modifier.height(10.dp))
         device?.let { Text(it.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("${it.oem} • ${it.model}", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, Modifier.padding(top = 8.dp)) }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp)) {
             items(builds.flatMap { build -> build.files.map { file -> build to file } }) { (build, file) ->
                 GlassCard {
                     Row(verticalAlignment = Alignment.Top) {
-                        Column(Modifier.weight(1f)) { Text("LineageOS ${build.version ?: "Unknown"}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(formatDate(build.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Column(Modifier.weight(1f)) {
+                            Text("LineageOS ${build.version ?: "Unknown"}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(formatDate(build.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         StatusPill("Official", MaterialTheme.colorScheme.primary)
                     }
                     Spacer(Modifier.height(12.dp))
@@ -392,7 +396,7 @@ private fun BuildContent(device: LineageDevice?, builds: List<LineageBuild>, loa
                     Spacer(Modifier.height(8.dp))
                     BuildMetaRow("Size", formatBytes(file.size)); BuildMetaRow("Android", file.os_sdk_level?.let { "SDK $it" } ?: "Unknown"); BuildMetaRow("Patch", file.os_patch_level ?: "Unknown"); BuildMetaRow("SHA-256", file.sha256 ?: "Not supplied")
                     Spacer(Modifier.height(12.dp))
-                    Button(onClick = { onDownload(file, build.version) }, enabled = file.url != null, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.CloudDownload, null); Spacer(Modifier.width(8.dp)); Text(if (file.url != null) "Download ZIP" else "URL unavailable") }
+                    Button(onClick = { onDownload(file, build.version) }, enabled = file.url != null, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.CloudDownload, null); Spacer(Modifier.width(8.dp)); Text(if (file.url != null) "Download ZIP" else "URL unavailable") }
                 }
             }
         }
@@ -404,12 +408,10 @@ private fun ArchiveContent(device: LineageDevice?, builds: List<ArchiveBuildSumm
     Column(Modifier.fillMaxSize()) {
         Spacer(Modifier.height(10.dp))
         Text("Older releases", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("${device?.name ?: "Selected device"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(device?.name ?: "Selected device", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
-        GlassCard {
-            Row(verticalAlignment = Alignment.Top) { Icon(Icons.Default.Archive, null, tint = MaterialTheme.colorScheme.secondary); Spacer(Modifier.width(10.dp)); Column { Text("TimSchumi archive", fontWeight = FontWeight.Bold); Text("Unofficial • old • unsupported. Verify the SHA-256 and LineageOS signature before use.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
-        }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
+        GlassCard { Row(verticalAlignment = Alignment.Top) { Icon(Icons.Default.Archive, null, tint = MaterialTheme.colorScheme.secondary); Spacer(Modifier.width(10.dp)); Column { Text("TimSchumi archive", fontWeight = FontWeight.Bold); Text("Unofficial • old • unsupported. Verify the SHA-256 and LineageOS signature before use.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } } }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, Modifier.padding(top = 8.dp)) }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 12.dp)) {
             items(builds) { build ->
@@ -418,7 +420,7 @@ private fun ArchiveContent(device: LineageDevice?, builds: List<ArchiveBuildSumm
                     Spacer(Modifier.height(6.dp))
                     Text("${archiveVersion(build.filename) ?: "LineageOS"} • ${archiveDate(build.filename)?.let(::formatDate) ?: "date unknown"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(10.dp))
-                    OutlinedButton(onClick = { onDownload(build) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.CloudDownload, null); Spacer(Modifier.width(8.dp)); Text("Download archived ZIP") }
+                    OutlinedButton(onClick = { onDownload(build) }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.CloudDownload, null); Spacer(Modifier.width(8.dp)); Text("Download archived ZIP") }
                 }
             }
         }
@@ -431,50 +433,66 @@ private fun DownloadsScreen(context: android.content.Context, downloads: List<Do
     val history = downloads.filter { it.id != active?.id }
     val progress = active?.let { downloadPercent(it.status) } ?: 0
     val downloading = active?.status?.startsWith("Downloading") == true
+    val dark = LocalArchiveDarkTheme.current
 
     Column(Modifier.fillMaxSize()) {
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { /* Main screen navigation is handled by the app bar/back gesture */ }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { /* Android back gesture/button returns to previous screen */ }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            Text("Software update", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Surface(shape = CircleShape, color = if (dark) Color.White.copy(alpha = .08f) else Color.Black.copy(alpha = .04f)) {
+                Icon(Icons.Default.Settings, "Update settings", Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("Software Update", modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-            Icon(Icons.Default.Settings, "Download settings", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 6.dp))
         }
 
         if (active != null) {
             Column(
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 8.dp),
+                Modifier.fillMaxWidth().weight(1f).padding(horizontal = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(292.dp)) {
+                Box(Modifier.size(300.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         progress = { if (active.status == "Queued") 0f else progress / 100f },
-                        modifier = Modifier.fillMaxSize(),
-                        strokeWidth = 15.dp,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)
+                        Modifier.fillMaxSize(),
+                        strokeWidth = 14.dp,
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = .08f)
                     )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(30.dp)) {
-                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = .10f), modifier = Modifier.size(64.dp)) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.primary)
-                            }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(36.dp)) {
+                        Text("LineageOS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(5.dp))
+                        Text(active.version ?: "Update", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            when {
+                                active.status == "Paused" -> "Paused"
+                                active.status == "Queued" -> "Preparing…"
+                                else -> "Downloading…"
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (active.status != "Queued") {
+                            Spacer(Modifier.height(4.dp))
+                            Text("$progress%", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        Spacer(Modifier.height(16.dp))
-                        Text(active.version?.let { "LineageOS $it" } ?: "LineageOS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(4.dp))
-                        Text(if (active.status == "Paused") "Paused" else if (active.status == "Queued") "Preparing…" else "Downloading…", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(8.dp))
-                        if (active.status != "Queued") Text("$progress%", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
-                Spacer(Modifier.height(26.dp))
-                Text(active.filename, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+
+                Spacer(Modifier.height(20.dp))
+                Text(active.filename, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(5.dp))
                 Text(active.device, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(14.dp))
-                Text(if (downloading) "Downloading update package" else active.status, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    when {
+                        downloading -> "Downloading update package"
+                        active.status == "Paused" -> "Download paused"
+                        active.status == "Queued" -> "Preparing update package"
+                        else -> active.status
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (downloading || active.status == "Queued") {
                         OutlinedButton(onClick = { DownloadHelper.pause(context, active.id) }, shape = RoundedCornerShape(16.dp)) { Text("Pause") }
@@ -485,7 +503,7 @@ private fun DownloadsScreen(context: android.content.Context, downloads: List<Do
             }
         } else if (history.isEmpty()) {
             Column(Modifier.fillMaxSize().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Icon(Icons.Default.Download, null, modifier = Modifier.size(52.dp), tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.Download, null, Modifier.size(52.dp), tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(14.dp))
                 Text("No downloads yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text("Choose a build to start a download.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -505,7 +523,7 @@ private fun DownloadsScreen(context: android.content.Context, downloads: List<Do
                                 Text(item.status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        item.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
+                        item.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, Modifier.padding(top = 8.dp)) }
                         if (item.verified == true) StatusPill("SHA-256 PASS", MaterialTheme.colorScheme.tertiary)
                         else if (item.verified == false) StatusPill("SHA-256 FAILED", MaterialTheme.colorScheme.error)
                     }
@@ -534,7 +552,7 @@ private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode)
                 }
             }
         }
-        item { GlassCard { Text("LineageOS Archive Downloader", fontWeight = FontWeight.Bold); Text("Version 1.0.1", color = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(8.dp)); Text("The interface uses a Liquid Glass inspired visual language adapted for Android: translucent navigation, clear hierarchy, rounded controls, restrained tinting and strong light/dark contrast.") } }
+        item { GlassCard { Text("LineageOS Archive Downloader", fontWeight = FontWeight.Bold); Text("Version 1.0.2", color = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(8.dp)); Text("EMUI-inspired software-update presentation with a Liquid Glass adapted interface for the rest of the app.") } }
         item { GlassCard { SettingRow(Icons.Default.Shield, "Integrity", "SHA-256 is checked after downloads when an expected digest is supplied."); HorizontalDivider(Modifier.padding(vertical = 12.dp)); SettingRow(Icons.Default.Info, "Authenticity", "SHA-256 proves file integrity, not who signed the ROM. Verify LineageOS signatures when required."); HorizontalDivider(Modifier.padding(vertical = 12.dp)); SettingRow(Icons.Default.Archive, "Archive", "TimSchumi is a separate unofficial archive for older builds.") } }
         item { GlassCard { Text("Safety boundary", fontWeight = FontWeight.Bold); Spacer(Modifier.height(6.dp)); Text("This app does not unlock bootloaders, flash ZIPs, replace recovery, modify partitions, or alter your system. It only discovers, downloads and verifies files.") } }
     }
@@ -542,9 +560,8 @@ private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode)
 
 @Composable
 private fun ThemeChoice(label: String, mode: ThemeMode, selectedMode: ThemeMode, onSelect: (ThemeMode) -> Unit, modifier: Modifier = Modifier) {
-    val selected = mode == selectedMode
-    if (selected) Button(onClick = { onSelect(mode) }, modifier = modifier.height(48.dp), shape = RoundedCornerShape(15.dp), contentPadding = PaddingValues(horizontal = 8.dp)) { Text(label, maxLines = 1) }
-    else OutlinedButton(onClick = { onSelect(mode) }, modifier = modifier.height(48.dp), shape = RoundedCornerShape(15.dp), contentPadding = PaddingValues(horizontal = 8.dp)) { Text(label, maxLines = 1) }
+    if (mode == selectedMode) Button(onClick = { onSelect(mode) }, modifier.height(48.dp), shape = RoundedCornerShape(15.dp), contentPadding = PaddingValues(horizontal = 8.dp)) { Text(label, maxLines = 1) }
+    else OutlinedButton(onClick = { onSelect(mode) }, modifier.height(48.dp), shape = RoundedCornerShape(15.dp), contentPadding = PaddingValues(horizontal = 8.dp)) { Text(label, maxLines = 1) }
 }
 
 @Composable
@@ -558,20 +575,34 @@ private fun GlassCard(onClick: (() -> Unit)? = null, content: @Composable Column
 
 @Composable
 private fun StatusPill(text: String, color: Color) {
-    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = .13f), border = BorderStroke(1.dp, color.copy(alpha = .22f))) { Text(text, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
+    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = .13f), border = BorderStroke(1.dp, color.copy(alpha = .22f))) {
+        Text(text, Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+    }
 }
 
 @Composable
 private fun BuildMetaRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-        Text(value, modifier = Modifier.padding(start = 12.dp).weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+        Text(value, Modifier.padding(start = 12.dp).weight(1f), textAlign = TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 private fun ErrorCard(message: String, retry: () -> Unit) {
-    GlassCard { Text("Couldn't check for builds", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error); Spacer(Modifier.height(4.dp)); Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(8.dp)); TextButton(onClick = retry) { Text("Try again") } }
+    GlassCard {
+        Text("Couldn't check for builds", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Spacer(Modifier.height(4.dp)); Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp)); TextButton(onClick = retry) { Text("Try again") }
+    }
+}
+
+@Composable
+private fun SettingRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(12.dp))
+        Column { Text(title, fontWeight = FontWeight.SemiBold); Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    }
 }
 
 private fun formatDate(seconds: Long): String = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date(seconds * 1000))
