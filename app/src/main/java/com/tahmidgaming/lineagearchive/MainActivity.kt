@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -67,6 +68,7 @@ class MainActivity : ComponentActivity() {
 
 private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, SETTINGS }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
     val context = LocalContext.current
@@ -405,14 +407,26 @@ private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode)
 @Composable
 private fun ThemeChoice(label: String, mode: ThemeMode, selected: ThemeMode, onClick: (ThemeMode) -> Unit, modifier: Modifier) {
     val chosen = mode == selected
-    Surface(modifier = modifier.clickable { onClick(mode) }, shape = RoundedCornerShape(16.dp), color = if (chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface.copy(.55f), border = BorderStroke(1.dp, if (chosen) MaterialTheme.colorScheme.primary.copy(.25f) else MaterialTheme.colorScheme.outlineVariant.copy(.45f))) { Box(Modifier.padding(vertical = 12.dp), contentAlignment = Alignment.Center) { Text(label, fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal) } }
+    val shape = RoundedCornerShape(16.dp)
+    Box(
+        modifier = modifier
+            .clickable { onClick(mode) }
+            .background(if (chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface.copy(.55f), shape)
+            .border(1.dp, if (chosen) MaterialTheme.colorScheme.primary.copy(.25f) else MaterialTheme.colorScheme.outlineVariant.copy(.45f), shape),
+        contentAlignment = Alignment.Center
+    ) { Text(label, modifier = Modifier.padding(vertical = 12.dp), fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal) }
 }
 
 @Composable
 private fun GlassCard(onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     val dark = LocalArchiveDarkTheme.current
+    val shape = RoundedCornerShape(26.dp)
     val modifier = if (onClick != null) Modifier.fillMaxWidth().clickable(onClick = onClick) else Modifier.fillMaxWidth()
-    Surface(modifier = modifier, shape = RoundedCornerShape(26.dp), color = if (dark) Color(0x991B2029) else Color(0xB8FFFFFF), border = BorderStroke(1.dp, if (dark) Color.White.copy(.10f) else Color.White.copy(.78f)), shadowElevation = 5.dp) { Column(Modifier.padding(18.dp), content = content) }
+    Box(
+        modifier = modifier
+            .background(if (dark) Color(0x991B2029) else Color(0xB8FFFFFF), shape)
+            .border(1.dp, if (dark) Color.White.copy(.10f) else Color.White.copy(.78f), shape)
+    ) { Column(Modifier.padding(18.dp), content = content) }
 }
 
 @Composable
