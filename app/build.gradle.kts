@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "com.tahmidgaming.lineagearchive"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.tahmidgaming.lineagearchive"
-        minSdk = 21
-        targetSdk = 35
-        versionCode = 103
-        versionName = "1.0.3"
+        minSdk = 23
+        targetSdk = 36
+        versionCode = 104
+        versionName = "1.0.4"
     }
 
     buildTypes {
@@ -50,7 +50,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("androidx.work:work-runtime-ktx:2.7.1")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
