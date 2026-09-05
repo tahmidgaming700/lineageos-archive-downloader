@@ -268,45 +268,12 @@ private fun CheckingContent() {
 @Composable
 private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?, latest: LineageFile?, latestBuild: LineageBuild?, loading: Boolean, error: String?, onRefresh: () -> Unit, onChoose: () -> Unit, onDownloads: () -> Unit, onArchive: () -> Unit, onDownload: (LineageFile, String?) -> Unit) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("Software Update", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("LineageOS Archive Downloader", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Check again") }
-            }
-        }
-        item {
-            GlassCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconBubble(Icons.Default.PhoneAndroid); Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) { Text("This device", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${detected.manufacturer} ${detected.model}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("${detected.device} • ${detected.product}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-                Spacer(Modifier.height(12.dp)); StatusPill(if (selected != null) "Supported • ${selected.name}" else "Select a supported device", if (selected != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        item {
-            GlassCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Latest build", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        if (latestBuild != null && latest != null) { Spacer(Modifier.height(4.dp)); Text("LineageOS ${latestBuild.version ?: ""}".trim(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text(formatDate(latestBuild.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        else if (!loading) Text("No current build found", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (latest != null && latestBuild != null) FilledIconButton(onClick = { onDownload(latest, latestBuild.version) }) { Icon(Icons.Default.Download, "Download latest build") }
-                }
-                if (loading) { Spacer(Modifier.height(16.dp)); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                else if (latest != null) { Spacer(Modifier.height(14.dp)); BuildMetaRow("Package", latest.filename); BuildMetaRow("Size", formatBytes(latest.size)); BuildMetaRow("Security patch", latest.os_patch_level ?: "Not supplied"); latest.sha256?.let { BuildMetaRow("SHA-256", it.take(16) + "…") } }
-            }
-        }
+        item { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Software Update", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("LineageOS Archive Downloader", color = MaterialTheme.colorScheme.onSurfaceVariant) }; IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Check again") } } }
+        item { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(Icons.Default.PhoneAndroid); Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text("This device", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${detected.manufacturer} ${detected.model}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("${detected.device} • ${detected.product}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }; Spacer(Modifier.height(12.dp)); StatusPill(if (selected != null) "Supported • ${selected.name}" else "Select a supported device", if (selected != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Latest build", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); if (latestBuild != null && latest != null) { Spacer(Modifier.height(4.dp)); Text("LineageOS ${latestBuild.version ?: ""}".trim(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text(formatDate(latestBuild.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) } else if (!loading) Text("No current build found", color = MaterialTheme.colorScheme.onSurfaceVariant) }; if (latest != null && latestBuild != null) FilledIconButton(onClick = { onDownload(latest, latestBuild.version) }) { Icon(Icons.Default.Download, "Download latest build") } }; if (loading) { Spacer(Modifier.height(16.dp)); LinearProgressIndicator(Modifier.fillMaxWidth()) } else if (latest != null) { Spacer(Modifier.height(14.dp)); BuildMetaRow("Package", latest.filename); BuildMetaRow("Size", formatBytes(latest.size)); BuildMetaRow("Security patch", latest.os_patch_level ?: "Not supplied"); latest.sha256?.let { BuildMetaRow("SHA-256", it.take(16) + "…") } } } }
         error?.let { item { ErrorCard(it, onRefresh) } }
-        item {
-            Button(onClick = onChoose, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(20.dp)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device", fontWeight = FontWeight.SemiBold) }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }
-                OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") }
-            }
-        }
+        item { Button(onClick = onChoose, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(20.dp)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device", fontWeight = FontWeight.SemiBold) } }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }; OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") } } }
     }
 }
 
@@ -315,13 +282,9 @@ private fun DeviceContent(devices: List<LineageDevice>, query: String, onQuery: 
     Column(Modifier.fillMaxSize()) {
         Spacer(Modifier.height(6.dp)); OutlinedTextField(value = query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Manufacturer, model or codename") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true, shape = RoundedCornerShape(20.dp)); Spacer(Modifier.height(10.dp))
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }; if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-            items(devices.filter { query.isBlank() || it.name.contains(query, true) || it.model.contains(query, true) || it.oem.contains(query, true) }) { device ->
-                GlassCard(onClick = { onSelect(device) }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(Icons.Default.PhoneAndroid); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(device.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("${device.oem} • ${device.model}", color = MaterialTheme.colorScheme.onSurfaceVariant) }; Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.primary) }
-                }
-            }
-        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) { items(devices.filter { query.isBlank() || it.name.contains(query, true) || it.model.contains(query, true) || it.oem.contains(query, true) }) { device ->
+            GlassCard(onClick = { onSelect(device) }) { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(Icons.Default.PhoneAndroid); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(device.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("${device.oem} • ${device.model}", color = MaterialTheme.colorScheme.onSurfaceVariant) }; Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.primary) } }
+        } }
     }
 }
 
@@ -331,14 +294,9 @@ private fun BuildContent(selected: LineageDevice?, builds: List<LineageBuild>, l
         selected?.let { Text(it.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Official LineageOS builds", color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(12.dp)) }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth()); error?.let { ErrorCard(it) }
         if (!loading && builds.isEmpty() && error == null) EmptyState(Icons.Default.SystemUpdate, "No builds found", "The official updater returned no builds for this device.")
-        else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
-            items(builds) { build -> build.files.firstOrNull()?.let { file ->
-                GlassCard {
-                    Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("LineageOS ${build.version ?: ""}".trim(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(formatDate(build.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) }; FilledIconButton(onClick = { onDownload(file, build.version) }) { Icon(Icons.Default.Download, "Download") } }
-                    Spacer(Modifier.height(10.dp)); BuildMetaRow("Package", file.filename); BuildMetaRow("Size", formatBytes(file.size)); BuildMetaRow("Patch", file.os_patch_level ?: "Not supplied"); file.sha256?.let { BuildMetaRow("SHA-256", it.take(20) + "…") }
-                }
-            } }
-        }
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(builds) { build -> build.files.firstOrNull()?.let { file ->
+            GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("LineageOS ${build.version ?: ""}".trim(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(formatDate(build.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) }; FilledIconButton(onClick = { onDownload(file, build.version) }) { Icon(Icons.Default.Download, "Download") } }; Spacer(Modifier.height(10.dp)); BuildMetaRow("Package", file.filename); BuildMetaRow("Size", formatBytes(file.size)); BuildMetaRow("Patch", file.os_patch_level ?: "Not supplied"); file.sha256?.let { BuildMetaRow("SHA-256", it.take(20) + "…") } }
+        } } }
     }
 }
 
@@ -348,9 +306,7 @@ private fun ArchiveContent(selected: LineageDevice?, archives: List<ArchiveBuild
         GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(Icons.Default.Archive); Spacer(Modifier.width(12.dp)); Column { Text("Unofficial archive", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); Text("Historical builds • ${selected?.name ?: "device"}", color = MaterialTheme.colorScheme.onSurfaceVariant) } } }
         Spacer(Modifier.height(12.dp)); if (loading) LinearProgressIndicator(Modifier.fillMaxWidth()); error?.let { ErrorCard(it) }
         if (!loading && archives.isEmpty() && error == null) EmptyState(Icons.Default.Archive, "No archived builds", "No historical packages were returned for this device.")
-        else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(archives) { item ->
-            GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(item.filename, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant) }; FilledIconButton(onClick = { onDownload(item) }) { Icon(Icons.Default.Download, "Download archived build") } } }
-        } }
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(archives) { item -> GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(item.filename, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant) }; FilledIconButton(onClick = { onDownload(item) }) { Icon(Icons.Default.Download, "Download archived build") } } } } }
     }
 }
 
@@ -358,23 +314,13 @@ private fun ArchiveContent(selected: LineageDevice?, archives: List<ArchiveBuild
 private fun DownloadsScreen(context: android.content.Context, downloads: List<DownloadStore.Item>, onBack: () -> Unit, onSettings: () -> Unit) {
     val active = downloads.lastOrNull { it.status.startsWith("Downloading") || it.status == "Queued" || it.status == "Paused" }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }; Text("Software update", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)); IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Settings") }
-        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }; Text("Software update", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)); IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Settings") } }
         if (active != null) {
             val percent = downloadPercent(active.status)
             val animated = animateFloatAsState((percent ?: 0) / 100f, tween(450), label = "download-progress")
-            Column(Modifier.fillMaxSize().padding(bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(24.dp)); EmuiUpdateRing(animated.value, "LineageOS", active.version ?: "Archive"); Spacer(Modifier.height(24.dp))
-                Text(if (active.status == "Paused") "Paused" else if (active.status == "Queued") "Preparing…" else "Downloading…", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp)); Text(percent?.let { "$it%" } ?: "Preparing", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(8.dp)); Text(active.filename, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(active.device, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(22.dp)); if (active.status == "Paused") Button(onClick = { DownloadHelper.resume(context, active) }, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(7.dp)); Text("Resume") } else OutlinedButton(onClick = { DownloadHelper.pause(context, active.id) }, shape = RoundedCornerShape(18.dp)) { Text("Pause") }
-            }
+            Column(Modifier.fillMaxSize().padding(bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) { Spacer(Modifier.height(24.dp)); EmuiUpdateRing(animated.value, "LineageOS", active.version ?: "Archive"); Spacer(Modifier.height(24.dp)); Text(if (active.status == "Paused") "Paused" else if (active.status == "Queued") "Preparing…" else "Downloading…", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(6.dp)); Text(percent?.let { "$it%" } ?: "Preparing", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(8.dp)); Text(active.filename, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(active.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(22.dp)); if (active.status == "Paused") Button(onClick = { DownloadHelper.resume(context, active) }, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(7.dp)); Text("Resume") } else OutlinedButton(onClick = { DownloadHelper.pause(context, active.id) }, shape = RoundedCornerShape(18.dp)) { Text("Pause") } }
         } else {
-            Text("Downloads", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp))
-            if (downloads.isEmpty()) EmptyState(Icons.Default.Download, "No downloads yet", "Downloaded builds will appear here.")
-            else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(downloads.asReversed()) { DownloadHistoryCard(it) } }
+            Text("Downloads", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp)); if (downloads.isEmpty()) EmptyState(Icons.Default.Download, "No downloads yet", "Downloaded builds will appear here.") else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(downloads.asReversed()) { DownloadHistoryCard(it) } }
         }
     }
 }
@@ -390,9 +336,7 @@ private fun EmuiUpdateRing(progress: Float?, centerTitle: String, centerSubtitle
 }
 
 @Composable
-private fun DownloadHistoryCard(item: DownloadStore.Item) {
-    GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) } } }
-}
+private fun DownloadHistoryCard(item: DownloadStore.Item) { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) } } } }
 
 @Composable
 private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
@@ -408,13 +352,7 @@ private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode)
 private fun ThemeChoice(label: String, mode: ThemeMode, selected: ThemeMode, onClick: (ThemeMode) -> Unit, modifier: Modifier) {
     val chosen = mode == selected
     val shape = RoundedCornerShape(16.dp)
-    Box(
-        modifier = modifier
-            .clickable { onClick(mode) }
-            .background(if (chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface.copy(.55f), shape)
-            .border(1.dp, if (chosen) MaterialTheme.colorScheme.primary.copy(.25f) else MaterialTheme.colorScheme.outlineVariant.copy(.45f), shape),
-        contentAlignment = Alignment.Center
-    ) { Text(label, modifier = Modifier.padding(vertical = 12.dp), fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal) }
+    Box(modifier = modifier.clickable { onClick(mode) }.background(if (chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface.copy(.55f), shape).border(1.dp, if (chosen) MaterialTheme.colorScheme.primary.copy(.25f) else MaterialTheme.colorScheme.outlineVariant.copy(.45f), shape), contentAlignment = Alignment.Center) { Text(label, modifier = Modifier.padding(vertical = 12.dp), fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal) }
 }
 
 @Composable
@@ -422,15 +360,11 @@ private fun GlassCard(onClick: (() -> Unit)? = null, content: @Composable Column
     val dark = LocalArchiveDarkTheme.current
     val shape = RoundedCornerShape(26.dp)
     val modifier = if (onClick != null) Modifier.fillMaxWidth().clickable(onClick = onClick) else Modifier.fillMaxWidth()
-    Box(
-        modifier = modifier
-            .background(if (dark) Color(0x991B2029) else Color(0xB8FFFFFF), shape)
-            .border(1.dp, if (dark) Color.White.copy(.10f) else Color.White.copy(.78f), shape)
-    ) { Column(Modifier.padding(18.dp), content = content) }
+    Box(modifier = modifier.background(if (dark) Color(0x991B2029) else Color(0xB8FFFFFF), shape).border(1.dp, if (dark) Color.White.copy(.10f) else Color.White.copy(.78f), shape)) { Column(Modifier.padding(18.dp), content = content) }
 }
 
 @Composable
-private fun IconBubble(icon: androidx.compose.ui.graphics.vector.ImageVector) { Surface(CircleShape, color = MaterialTheme.colorScheme.primaryContainer.copy(.75f)) { Icon(icon, null, Modifier.padding(12.dp), tint = MaterialTheme.colorScheme.primary) } }
+private fun IconBubble(icon: androidx.compose.ui.graphics.vector.ImageVector) { Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer.copy(.75f)) { Icon(icon, null, Modifier.padding(12.dp), tint = MaterialTheme.colorScheme.primary) } }
 
 @Composable
 private fun StatusPill(text: String, color: Color) { Surface(shape = RoundedCornerShape(50), color = color.copy(.11f)) { Text(text, Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) } }
