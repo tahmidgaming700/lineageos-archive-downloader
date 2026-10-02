@@ -57,8 +57,8 @@ object UpdateRepository {
     suspend fun os(device: LineageDevice?, currentVersion: String): UpdateItem = withContext(Dispatchers.IO) {
         if (device == null) return@withContext UpdateItem("OS", currentVersion, null, description = "Select a supported LineageOS device first")
         val builds = runCatching { LineageRepository.builds(device.model) }.getOrDefault(emptyList())
-        val latest = builds.flatMap { it.files }.firstOrNull()
-        UpdateItem("OS", currentVersion, latest?.let { it.os_patch_level ?: builds.maxOfOrNull { b -> b.version ?: "" } }, latest?.let {
+        val latestBuild = builds.firstOrNull()\n        val latest = latestBuild?.files?.firstOrNull()
+        UpdateItem("OS", currentVersion, latestBuild?.version, latest?.let {
             AddonDownload(it.filename, latest.os_patch_level ?: "LineageOS", it.size ?: 0L, it.sha256, it.url ?: "", "LineageOS")
         }, "Latest official LineageOS build", latest != null)
     }
