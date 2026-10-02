@@ -89,7 +89,7 @@ object UpdateRepository {
                 .getOrDefault(emptyList())
                 .filter { download ->
                     download.source.substringAfterLast("/")
-                        .matches(Regex("^\$androidMajor(?:\\.0\\.0|\\.1\\.0)-\$arch(?:-ATV)?$"))
+                        .matches(Regex("^" + androidMajor + "(?:\\.0\\.0|\\.1\\.0)-" + arch + "(?:-ATV)?$"))
                 }
                 .maxByOrNull { it.version }
 
@@ -98,7 +98,7 @@ object UpdateRepository {
                 installed = "not tracked",
                 available = repo?.version,
                 file = repo,
-                description = "Latest MindTheGapps package for Android \$androidMajor / \$arch",
+                description = "Latest MindTheGapps package for Android " + androidMajor + " / " + arch,
                 canDownload = repo != null
             )
         }
