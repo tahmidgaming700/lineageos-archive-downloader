@@ -102,9 +102,13 @@ private fun UpdateCard(item: UpdateItem, onDownload: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text("Installed: " + item.installed)
             Text("Available: " + (item.available ?: "—"), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (update && item.canDownload) {
+            if (item.canDownload && item.file?.url?.isNotBlank() == true && (update || item.type == "GApps")) {
                 Spacer(Modifier.height(10.dp))
-                FilledTonalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(7.dp)); Text("Download update") }
+                FilledTonalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Download, null)
+                    Spacer(Modifier.width(7.dp))
+                    Text(if (update) "Download update" else "Download latest")
+                }
             }
         }
     }
