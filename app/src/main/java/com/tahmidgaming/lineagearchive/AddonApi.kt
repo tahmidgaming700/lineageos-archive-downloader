@@ -40,6 +40,13 @@ interface GithubAddonApi {
         @Query("per_page") perPage: Int = 3
     ): List<GithubRelease>
 
+    @GET("repos/{owner}/{repo}/releases")
+    suspend fun githubReleases(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Query("per_page") perPage: Int = 10
+    ): List<GithubRelease>
+
     @GET("repos/topjohnwu/Magisk/releases")
     suspend fun magiskReleases(
         @Query("per_page") perPage: Int = 5
