@@ -131,10 +131,23 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
     private fun createForegroundInfo(filename: String, progress: Int): ForegroundInfo {
         ensureChannel()
-        return ForegroundInfo(NOTIFICATION_ID, NotificationCompat.Builder(applicationContext, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle(filename)
+        val notification = NotificationCompat.Builder(applicationContext, CHANNEL)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle(filename)
             .setContentText(if (progress > 0) "Downloading • $progress%" else "Preparing download")
-            .setProgress(100, progress, progress == 0).setOngoing(true).build())
+            .setProgress(100, progress, progress == 0)
+            .setOngoing(true)
+            .build()
+
+        return if (Build.VERSION.SDK_INT >= 29) {
+            ForegroundInfo(
+                NOTIFICATION_ID,
+                notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
+        }
     }
 
     private fun updateNotification(filename: String, progress: Int) {
