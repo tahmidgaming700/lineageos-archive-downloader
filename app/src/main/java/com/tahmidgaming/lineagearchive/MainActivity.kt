@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, SETTINGS }
+private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, TOOLS, SETTINGS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +89,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var error by remember { mutableStateOf<String?>(null) }
     var flashCapability by remember { mutableStateOf(FlashManager.Capability(false, false)) }
     var flashMessage by remember { mutableStateOf<String?>(null) }
-    var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }
+    var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }\n    var gapps by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }\n    var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }\n    var toolsLoading by remember { mutableStateOf(false) }\n    var toolsError by remember { mutableStateOf<String?>(null) }
 
     var pendingDownload by remember { mutableStateOf<Triple<LineageFile, String, String?>?>(null) }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -223,7 +223,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         }
                     }
                     Screen.DOWNLOADS -> DownloadsScreen(context, downloads, flashCapability, flashMessage, { flashMessage = null }, { item ->
-                        val result = FlashManager.flashVerifiedZip(context, item.filename)
+                        val result = FlashManager.flashVerifiedZip(context, item.filename, FlashManager.Recovery.TWRP)
                         flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to start TWRP installation."
                     }, { screen = Screen.HOME }, { screen = Screen.SETTINGS })
                     Screen.SETTINGS -> SettingsContent(themeMode, onThemeModeChange)
@@ -310,7 +310,7 @@ private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?,
                     } } } }
         error?.let { item { ErrorCard(it, onRefresh) } }
         item { Button(onClick = onChoose, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(20.dp)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device", fontWeight = FontWeight.SemiBold) } }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }; OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") } } }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }; OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") } } }\n        item { OutlinedButton(onClick = { onDownloads(); }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flashing & tools") } }
     }
 }
 
