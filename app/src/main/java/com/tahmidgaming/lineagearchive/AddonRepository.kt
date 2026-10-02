@@ -49,7 +49,7 @@ object AddonRepository {
         val repos = api.gappsRepos()
             .filterNot { it.archived }
             .map { it.name }
-            .filter { Regex("^([0-9]{2})\.0\.0-(arm64|arm)(-ATV)?$").matches(it) }
+            .filter { Regex("^([0-9]{2})\\.0\\.0-(arm64|arm)(-ATV)?$").matches(it) }
             .sortedWith(compareByDescending<String> { Regex("^([0-9]{2})").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0 }
                 .thenBy { if (it.contains("arm64")) 0 else 1 })
             .take(16)
