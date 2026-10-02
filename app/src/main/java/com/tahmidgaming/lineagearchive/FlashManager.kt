@@ -45,11 +45,13 @@ object FlashManager {
               if [ -d "\$d" ] && printf '%s' $escaped > "\$f"; then chmod 0644 "\$f"; wrote=1; break; fi
             done
             [ "\$wrote" = "1" ] || exit 2
+            echo FLASH_READY
             reboot recovery
         """.trimIndent().replace("\n", " ")
 
-        runRoot(command)
-        return Result.success(Unit)
+        val output = runRoot(command)
+        return if (output.contains("FLASH_READY")) Result.success(Unit)
+        else Result.failure(IllegalStateException("Unable to prepare TWRP flash"))
     }
 
     private fun shellQuote(value: String): String =
