@@ -89,7 +89,12 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var error by remember { mutableStateOf<String?>(null) }
     var flashCapability by remember { mutableStateOf(FlashManager.Capability(false, false, false)) }
     var flashMessage by remember { mutableStateOf<String?>(null) }
-    var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }\n    var gapps by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }\n    var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }\n    var toolsLoading by remember { mutableStateOf(false) }\n    var toolsError by remember { mutableStateOf<String?>(null) }\n    var toolsRefresh by remember { mutableStateOf(0) }
+    var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }
+    var gapps by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
+    var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
+    var toolsLoading by remember { mutableStateOf(false) }
+    var toolsError by remember { mutableStateOf<String?>(null) }
+    var toolsRefresh by remember { mutableStateOf(0) }
 
     var pendingDownload by remember { mutableStateOf<Triple<LineageFile, String, String?>?>(null) }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -333,7 +338,8 @@ private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?,
                     } } } }
         error?.let { item { ErrorCard(it, onRefresh) } }
         item { Button(onClick = onChoose, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(20.dp)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device", fontWeight = FontWeight.SemiBold) } }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }; OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") } } }\n        item { OutlinedButton(onClick = onTools, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flashing & tools") } }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }; OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") } } }
+        item { OutlinedButton(onClick = onTools, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flashing & tools") } }
     }
 }
 
