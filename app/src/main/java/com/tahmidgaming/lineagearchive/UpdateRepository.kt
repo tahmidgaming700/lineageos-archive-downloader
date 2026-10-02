@@ -63,7 +63,7 @@ object UpdateRepository {
         }, "Latest official LineageOS build", latest != null)
     }
 
-    fun localRecovery(context: Context): Pair<String, String> {
+    fun localOsVersion(): String = runRoot("getprop ro.lineage.version").trim().ifBlank { Build.VERSION.RELEASE }\n\n    fun localRecovery(context: Context): Pair<String, String> {
         val props = runRoot("getprop ro.twrp.version; getprop ro.orangefox.version; getprop ro.of.version")
             .lines().map { it.trim() }.filter { it.isNotBlank() && it != "0" }
         return (props.firstOrNull() ?: "not detected") to (props.drop(1).firstOrNull() ?: "not detected")
