@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -88,6 +89,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var error by remember { mutableStateOf<String?>(null) }
     var flashCapability by remember { mutableStateOf(FlashManager.Capability(false, false)) }
     var flashMessage by remember { mutableStateOf<String?>(null) }
+    var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }
 
     var pendingDownload by remember { mutableStateOf<Triple<LineageFile, String, String?>?>(null) }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -202,10 +204,11 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         onChoose = ::loadDevices,
                         onDownloads = { screen = Screen.DOWNLOADS },
                         onArchive = ::loadArchive,
-                        onDownload = { file, version -> startDownload(file, selected?.model ?: "device", version) }
+                        onDownload = { file, version -> startDownload(file, selected?.model ?: "device", version) },
+                        onFlash = { pendingFlash = it }
                     )
                     Screen.DEVICES -> DeviceContent(devices, query, { query = it }, loading, error, ::selectDevice)
-                    Screen.BUILDS -> BuildContent(selected, builds, loading, error) { file, version -> startDownload(file, selected?.model ?: "device", version) }
+                    Screen.BUILDS -> BuildContent(selected, builds, loading, error, flashCapability, downloads, { pendingFlash = it }) { file, version -> startDownload(file, selected?.model ?: "device", version) }
                     Screen.ARCHIVE -> ArchiveContent(selected, archiveBuilds, loading, error) { summary ->
                         scope.launch {
                             loading = true
@@ -227,6 +230,24 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                 }
             }
         }
+    }
+
+    pendingFlash?.let { item ->
+        AlertDialog(
+            onDismissRequest = { pendingFlash = null },
+            title = { Text("Flash with TWRP?") },
+            text = { Text("The verified ROM ZIP will be handed to TWRP and the device will reboot into recovery. Make sure this package is intended for ${item.device} and that you have a current backup.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingFlash = null
+                    scope.launch(Dispatchers.IO) {
+                        val result = FlashManager.flashVerifiedZip(context, item.filename)
+                        flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to prepare TWRP installation."
+                    }
+                }) { Text("Flash") }
+            },
+            dismissButton = { TextButton(onClick = { pendingFlash = null }) { Text("Cancel") } }
+        )
     }
 }
 
