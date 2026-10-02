@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, TOOLS, SETTINGS }
+private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, TOOLS, UPDATES, SETTINGS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +94,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
     var toolsLoading by remember { mutableStateOf(false) }
     var toolsError by remember { mutableStateOf<String?>(null) }
-    var toolsRefresh by remember { mutableStateOf(0) }
+    var toolsRefresh by remember { mutableStateOf(0) }\n    var updateRefresh by remember { mutableStateOf(0) }\n    val currentOsVersion = remember { UpdateRepository.localOsVersion() }
 
     var pendingDownload by remember { mutableStateOf<Triple<LineageFile, String, String?>?>(null) }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -241,7 +241,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         val result = FlashManager.flashVerifiedZip(context, item.filename, FlashManager.Recovery.TWRP)
                         flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to start TWRP installation."
                     }, { screen = Screen.HOME }, { screen = Screen.SETTINGS })
-                    Screen.TOOLS -> ToolsScreen(
+                    Screen.UPDATES -> UpdateCenterScreen(context, selected, currentOsVersion, { file, device, version -> startDownload(file, device ?: "updates", version) }, updateRefresh) { updateRefresh++ }\n                        Screen.TOOLS -> ToolsScreen(
                         context = context,
                         capability = flashCapability,
                         downloads = downloads,
