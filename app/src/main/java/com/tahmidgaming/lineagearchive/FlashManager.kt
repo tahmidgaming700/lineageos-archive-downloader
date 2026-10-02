@@ -75,9 +75,9 @@ object FlashManager {
 
     private fun runRoot(command: String): String = runCatching {
         val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-        val stdout = BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
-        val stderr = BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
+        process.redirectErrorStream(true)
+        val output = BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
         process.waitFor()
-        stdout + stderr
+        output
     }.getOrDefault("")
 }
