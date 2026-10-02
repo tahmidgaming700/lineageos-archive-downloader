@@ -44,8 +44,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,6 +86,8 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var loading by remember { mutableStateOf(false) }
     var initialChecking by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var flashCapability by remember { mutableStateOf(FlashManager.Capability(false, false)) }
+    var flashMessage by remember { mutableStateOf<String?>(null) }
 
     var pendingDownload by remember { mutableStateOf<Triple<LineageFile, String, String?>?>(null) }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -114,6 +118,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     }
 
     LaunchedEffect(Unit) {
+        flashCapability = withContext(Dispatchers.IO) { FlashManager.detect(context) }
         loading = true
         error = null
         runCatching { LineageRepository.devices() }
@@ -214,7 +219,10 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                             loading = false
                         }
                     }
-                    Screen.DOWNLOADS -> DownloadsScreen(context, downloads, { screen = Screen.HOME }, { screen = Screen.SETTINGS })
+                    Screen.DOWNLOADS -> DownloadsScreen(context, downloads, flashCapability, flashMessage, { flashMessage = null }, { item ->
+                        val result = FlashManager.flashVerifiedZip(context, item.filename)
+                        flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to start TWRP installation."
+                    }, { screen = Screen.HOME }, { screen = Screen.SETTINGS })
                     Screen.SETTINGS -> SettingsContent(themeMode, onThemeModeChange)
                 }
             }
@@ -311,7 +319,7 @@ private fun ArchiveContent(selected: LineageDevice?, archives: List<ArchiveBuild
 }
 
 @Composable
-private fun DownloadsScreen(context: android.content.Context, downloads: List<DownloadStore.Item>, onBack: () -> Unit, onSettings: () -> Unit) {
+private fun DownloadsScreen(context: android.content.Context, downloads: List<DownloadStore.Item>, flashCapability: FlashManager.Capability, flashMessage: String?, onDismissFlashMessage: () -> Unit, onFlash: (DownloadStore.Item) -> Unit, onBack: () -> Unit, onSettings: () -> Unit) {
     val active = downloads.lastOrNull { it.status.startsWith("Downloading") || it.status == "Queued" || it.status == "Paused" }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }; Text("Software update", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)); IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Settings") } }
@@ -320,7 +328,7 @@ private fun DownloadsScreen(context: android.content.Context, downloads: List<Do
             val animated = animateFloatAsState((percent ?: 0) / 100f, tween(450), label = "download-progress")
             Column(Modifier.fillMaxSize().padding(bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) { Spacer(Modifier.height(24.dp)); EmuiUpdateRing(animated.value, "LineageOS", active.version ?: "Archive"); Spacer(Modifier.height(24.dp)); Text(if (active.status == "Paused") "Paused" else if (active.status == "Queued") "Preparing…" else "Downloading…", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(6.dp)); Text(percent?.let { "$it%" } ?: "Preparing", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(8.dp)); Text(active.filename, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(active.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(22.dp)); if (active.status == "Paused") Button(onClick = { DownloadHelper.resume(context, active) }, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(7.dp)); Text("Resume") } else OutlinedButton(onClick = { DownloadHelper.pause(context, active.id) }, shape = RoundedCornerShape(18.dp)) { Text("Pause") } }
         } else {
-            Text("Downloads", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp)); if (downloads.isEmpty()) EmptyState(Icons.Default.Download, "No downloads yet", "Downloaded builds will appear here.") else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(downloads.asReversed()) { DownloadHistoryCard(it) } }
+            Text("Downloads", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp)); if (flashCapability.ready) { GlassCard { SettingRow(Icons.Default.Build, "TWRP flashing available", "Root and TWRP were detected. Verified downloaded ZIPs can be handed to TWRP."); }; Spacer(Modifier.height(10.dp)) } if (flashMessage != null) { ErrorCard(flashMessage, onDismissFlashMessage); Spacer(Modifier.height(10.dp)) } if (downloads.isEmpty()) EmptyState(Icons.Default.Download, "No downloads yet", "Downloaded builds will appear here.") else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(downloads.asReversed()) { DownloadHistoryCard(it, flashCapability, onFlash) } }
         }
     }
 }
@@ -336,15 +344,15 @@ private fun EmuiUpdateRing(progress: Float?, centerTitle: String, centerSubtitle
 }
 
 @Composable
-private fun DownloadHistoryCard(item: DownloadStore.Item) { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) } } } }
+private fun DownloadHistoryCard(item: DownloadStore.Item, flashCapability: FlashManager.Capability, onFlash: (DownloadStore.Item) -> Unit) { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) } }; if (flashCapability.ready && item.status.startsWith("Downloaded")) { Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = { onFlash(item) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flash with TWRP") } } } }
 
 @Composable
 private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 30.dp)) {
         item { Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("One UI-inspired controls with Liquid Glass surfaces", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { GlassCard { SettingRow(Icons.Default.Settings, "Appearance", "Choose how the downloader looks"); Spacer(Modifier.height(14.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) { ThemeChoice("System", ThemeMode.SYSTEM, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Light", ThemeMode.LIGHT, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Dark", ThemeMode.DARK, themeMode, onThemeModeChange, Modifier.weight(1f)) } } }
-        item { GlassCard { SettingRow(Icons.Default.Shield, "Verification", "Downloads are checked with SHA-256 when the source provides a checksum."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Info, "Safety", "This app downloads and verifies ROM packages only. It never flashes partitions or modifies your device.") } }
-        item { GlassCard { SettingRow(Icons.Default.Wifi, "Sources", "Official LineageOS builds and the clearly labeled TimSchumi archive."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Storage, "Compatibility", "Android 5.0+ with resumable downloads where the server supports HTTP Range requests."); Spacer(Modifier.height(16.dp)); Text("Version 1.0.3", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { GlassCard { SettingRow(Icons.Default.Shield, "Verification", "Downloads are checked with SHA-256 when the source provides a checksum."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Info, "Safety", "Downloaded packages are verified with SHA-256 when a checksum is supplied. If root and TWRP are detected, a verified ZIP can be handed to TWRP for installation.") } }
+        item { GlassCard { SettingRow(Icons.Default.Wifi, "Sources", "Official LineageOS builds and the clearly labeled TimSchumi archive."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Storage, "Compatibility", "Android 5.0+ with resumable downloads where the server supports HTTP Range requests."); Spacer(Modifier.height(16.dp)); Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
     }
 }
 
