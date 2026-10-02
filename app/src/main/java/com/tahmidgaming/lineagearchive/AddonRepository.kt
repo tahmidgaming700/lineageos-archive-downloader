@@ -32,6 +32,9 @@ object AddonRepository {
             .create(GithubAddonApi::class.java)
     }
 
+    suspend fun latestGithubRelease(owner: String, repo: String): GithubRelease =
+        api.githubReleases(owner, repo, 1).first()
+
     suspend fun magisk(): List<AddonDownload> {
         return api.magiskReleases()
             .flatMap { release ->
