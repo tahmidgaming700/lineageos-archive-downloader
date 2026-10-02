@@ -37,7 +37,7 @@ object AddonRepository {
             .flatMap { release ->
                 release.assets.filter { it.name.endsWith(".apk", true) || it.name.endsWith(".zip", true) }
                     .map { asset ->
-                        AddonDownload(asset.name, release.tag_name, asset.size, null, asset.browser_download_url, "topjohnwu/Magisk")
+                        AddonDownload(asset.name, release.tag_name, asset.size, asset.digest?.removePrefix("sha256:"), asset.browser_download_url, "topjohnwu/Magisk")
                     }
             }
     }
@@ -58,7 +58,7 @@ object AddonRepository {
                     ?.let { release ->
                         release.assets.filter { it.name.endsWith(".zip", true) }
                             .map { asset ->
-                                AddonDownload(asset.name, release.tag_name, asset.size, null, asset.browser_download_url, "MindTheGapps/$repo")
+                                AddonDownload(asset.name, release.tag_name, asset.size, asset.digest?.removePrefix("sha256:"), asset.browser_download_url, "MindTheGapps/$repo")
                             }
                     } ?: emptyList()
             }
