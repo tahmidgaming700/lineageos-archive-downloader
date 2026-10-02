@@ -23,7 +23,8 @@ data class GithubRelease(
 data class GithubAsset(
     val name: String,
     val size: Long = 0,
-    val browser_download_url: String
+    val browser_download_url: String,
+    val digest: String? = null
 )
 
 interface GithubAddonApi {
