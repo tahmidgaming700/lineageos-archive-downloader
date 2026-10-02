@@ -171,7 +171,7 @@ private fun ToolStatus(label: String, available: Boolean) {
 }
 
 @Composable
-private fun FlashButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+private fun RowScope.FlashButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
         Icon(Icons.Default.Build, null, Modifier.size(16.dp))
         Spacer(Modifier.width(3.dp))
