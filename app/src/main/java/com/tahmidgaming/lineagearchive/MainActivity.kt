@@ -264,7 +264,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                 TextButton(onClick = {
                     pendingFlash = null
                     scope.launch(Dispatchers.IO) {
-                        val result = FlashManager.flashVerifiedZip(context, item.filename)
+                        val result = FlashManager.flashVerifiedZip(context, item.filename, FlashManager.Recovery.TWRP)
                         flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to prepare TWRP installation."
                     }
                 }) { Text("Flash") }
