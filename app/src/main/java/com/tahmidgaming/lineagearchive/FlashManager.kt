@@ -17,14 +17,13 @@ object FlashManager {
         if (!rooted) return Capability(false, false)
 
         val twrpProperty = runRoot("getprop ro.twrp.version").trim()
-        val twrpApp = runRoot("pm path me.twrp.twrpapp").isNotBlank()
         val recoverySignature = runRoot(
             "for p in /dev/block/by-name/recovery /dev/block/bootdevice/by-name/recovery; do " +
                 "if [ -r \"\$p\" ]; then grep -a -m 1 -i -E 'TWRP|TeamWin' \"\$p\" >/dev/null 2>&1 && echo yes && exit 0; fi; " +
                 "done; exit 1"
         ).contains("yes", ignoreCase = true)
 
-        return Capability(true, twrpProperty.isNotBlank() || twrpApp || recoverySignature)
+        return Capability(true, twrpProperty.isNotBlank() || recoverySignature)
     }
 
     fun flashVerifiedZip(context: Context, filename: String): Result<Unit> {
