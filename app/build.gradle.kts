@@ -14,8 +14,8 @@ android {
         // Android 6.0 (API 23) compatibility floor: Samsung TouchWiz through Android 16.
         minSdk = 23
         targetSdk = 36
-        versionCode = 1034
-        versionName = "1.0.34"
+        versionCode = 1035
+        versionName = "1.0.35"
     }
 
     buildTypes {
