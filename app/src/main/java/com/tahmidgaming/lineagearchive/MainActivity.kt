@@ -87,7 +87,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var loading by remember { mutableStateOf(false) }
     var initialChecking by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    var flashCapability by remember { mutableStateOf(FlashManager.Capability(false, false)) }
+    var flashCapability by remember { mutableStateOf(FlashManager.Capability(false, false, false)) }
     var flashMessage by remember { mutableStateOf<String?>(null) }
     var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }\n    var gapps by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }\n    var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }\n    var toolsLoading by remember { mutableStateOf(false) }\n    var toolsError by remember { mutableStateOf<String?>(null) }\n    var toolsRefresh by remember { mutableStateOf(0) }
 
@@ -134,7 +134,16 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
         initialChecking = false
     }
 
-    LaunchedEffect(screen) {
+    LaunchedEffect(screen, toolsRefresh) {
+        if (screen == Screen.TOOLS) {
+            toolsLoading = true
+            toolsError = null
+            runCatching {
+                gapps = AddonRepository.gapps()
+                magisk = AddonRepository.magisk()
+            }.onFailure { toolsError = it.message ?: "Unable to load addon downloads" }
+            toolsLoading = false
+        }
         while (screen == Screen.DOWNLOADS) {
             downloads = DownloadStore.items(context)
             delay(350)
@@ -205,7 +214,8 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         onDownloads = { screen = Screen.DOWNLOADS },
                         onArchive = ::loadArchive,
                         onDownload = { file, version -> startDownload(file, selected?.model ?: "device", version) },
-                        onFlash = { pendingFlash = it }
+                        onFlash = { pendingFlash = it },
+                        onTools = { screen = Screen.TOOLS }
                     )
                     Screen.DEVICES -> DeviceContent(devices, query, { query = it }, loading, error, ::selectDevice)
                     Screen.BUILDS -> BuildContent(selected, builds, loading, error, flashCapability, downloads, { pendingFlash = it }) { file, version -> startDownload(file, selected?.model ?: "device", version) }
@@ -226,6 +236,19 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         val result = FlashManager.flashVerifiedZip(context, item.filename, FlashManager.Recovery.TWRP)
                         flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to start TWRP installation."
                     }, { screen = Screen.HOME }, { screen = Screen.SETTINGS })
+                    Screen.TOOLS -> ToolsScreen(
+                        context = context,
+                        capability = flashCapability,
+                        downloads = downloads,
+                        gapps = gapps,
+                        magisk = magisk,
+                        loading = toolsLoading,
+                        error = toolsError,
+                        onRefresh = { toolsRefresh++ },
+                        onDownloadAddon = { addon ->
+                            startDownload(LineageFile(addon.name, addon.size, addon.sha256, addon.url), "addons", addon.version)
+                        }
+                    )
                     Screen.SETTINGS -> SettingsContent(themeMode, onThemeModeChange)
                 }
             }
