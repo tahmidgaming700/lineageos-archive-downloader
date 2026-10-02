@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: release-main
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   release:
@@ -55,6 +55,10 @@ jobs:
       - name: Build release APK
         if: steps.existing.outputs.exists != 'true'
         run: gradle :app:assembleRelease --stacktrace --no-daemon
+
+      - name: Verify release APK
+        if: steps.existing.outputs.exists != 'true'
+        run: test -s app/build/outputs/apk/release/app-release.apk
 
       - name: Publish release
         if: steps.existing.outputs.exists != 'true'
