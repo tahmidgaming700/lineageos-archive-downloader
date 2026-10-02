@@ -74,8 +74,9 @@ object FlashManager {
         "'" + value.replace("'", "'\\''") + "'"
 
     private fun runRoot(command: String): String = runCatching {
-        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-        process.redirectErrorStream(true)
+        val process = ProcessBuilder("su", "-c", command)
+            .redirectErrorStream(true)
+            .start()
         val output = BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
         process.waitFor()
         output
