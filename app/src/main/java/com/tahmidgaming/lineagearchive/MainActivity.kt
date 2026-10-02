@@ -296,6 +296,7 @@ private fun FloatingNavigationBar(screen: Screen, onSelect: (Screen) -> Unit) {
             NavItem("Home", Icons.Default.Home, screen == Screen.HOME) { onSelect(Screen.HOME) }
             NavItem("Archive", Icons.Default.Archive, screen == Screen.ARCHIVE) { onSelect(Screen.ARCHIVE) }
             NavItem("Downloads", Icons.Default.Download, screen == Screen.DOWNLOADS) { onSelect(Screen.DOWNLOADS) }
+            NavItem("Updates", Icons.Default.SystemUpdate, screen == Screen.UPDATES) { onSelect(Screen.UPDATES) }
             NavItem("Settings", Icons.Default.Settings, screen == Screen.SETTINGS) { onSelect(Screen.SETTINGS) }
         }
     }
