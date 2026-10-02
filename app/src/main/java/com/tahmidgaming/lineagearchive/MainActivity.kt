@@ -94,7 +94,8 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
     var toolsLoading by remember { mutableStateOf(false) }
     var toolsError by remember { mutableStateOf<String?>(null) }
-    var toolsRefresh by remember { mutableStateOf(0) }\n    var updateRefresh by remember { mutableStateOf(0) }\n    val currentOsVersion = remember { UpdateRepository.localOsVersion() }
+    var toolsRefresh by remember { mutableStateOf(0) }
+    var updateRefresh by remember { mutableStateOf(0) }\n    val currentOsVersion = remember { UpdateRepository.localOsVersion() }
 
     var pendingDownload by remember { mutableStateOf<Triple<LineageFile, String, String?>?>(null) }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -308,6 +309,8 @@ private fun titleFor(screen: Screen) = when (screen) {
     Screen.BUILDS -> "Available builds"
     Screen.ARCHIVE -> "Archive"
     Screen.DOWNLOADS -> "Software update"
+    Screen.TOOLS -> "Flashing & tools"
+    Screen.UPDATES -> "Updates"
     Screen.SETTINGS -> "Settings"
     Screen.HOME -> "LineageOS Downloader"
 }
