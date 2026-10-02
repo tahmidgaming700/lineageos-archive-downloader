@@ -159,7 +159,7 @@ object UpdateRepository {
     }
 
     private fun parseMagiskVersion(value: String): String {
-        val version = Regex("""\\b\\d+\\.\\d+(?:\\.\\d+)?\\b""")
+        val version = Regex("\\b\\d+(?:\\.\\d+)?\\b")
             .find(value)
             ?.value
         return version ?: "not installed"
