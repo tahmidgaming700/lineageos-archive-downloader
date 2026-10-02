@@ -215,7 +215,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp)) {
                 when (screen) {
                     Screen.HOME -> if (initialChecking) CheckingContent() else HomeContent(
-                        detected, selected, builds.firstOrNull()?.files?.firstOrNull(), builds.firstOrNull(), loading, error,
+                        detected, selected, builds.firstOrNull()?.files?.firstOrNull(), builds.firstOrNull(), loading, error, flashCapability, downloads,
                         onRefresh = { scope.launch { loading = true; error = null; refreshForDevice(selected); loading = false } },
                         onChoose = ::loadDevices,
                         onDownloads = { screen = Screen.DOWNLOADS },
@@ -391,16 +391,147 @@ private fun ArchiveContent(selected: LineageDevice?, archives: List<ArchiveBuild
 }
 
 @Composable
-private fun DownloadsScreen(context: android.content.Context, downloads: List<DownloadStore.Item>, flashCapability: FlashManager.Capability, flashMessage: String?, onDismissFlashMessage: () -> Unit, onFlash: (DownloadStore.Item) -> Unit, onBack: () -> Unit, onSettings: () -> Unit) {
-    val active = downloads.lastOrNull { it.status.startsWith("Downloading") || it.status == "Queued" || it.status == "Paused" }
+private fun DownloadsScreen(
+    context: android.content.Context,
+    downloads: List<DownloadStore.Item>,
+    flashCapability: FlashManager.Capability,
+    flashMessage: String?,
+    onDismissFlashMessage: () -> Unit,
+    onFlash: (DownloadStore.Item) -> Unit,
+    onBack: () -> Unit,
+    onSettings: () -> Unit
+) {
+    val active = downloads.lastOrNull {
+        it.status.startsWith("Downloading") ||
+            it.status == "Queued" ||
+            it.status == "Paused"
+    }
+
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }; Text("Software update", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)); IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Settings") } }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+            }
+            Text(
+                "Software update",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onSettings) {
+                Icon(Icons.Default.Settings, "Settings")
+            }
+        }
+
         if (active != null) {
             val percent = downloadPercent(active.status)
-            val animated = animateFloatAsState((percent ?: 0) / 100f, tween(450), label = "download-progress")
-            Column(Modifier.fillMaxSize().padding(bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) { Spacer(Modifier.height(24.dp)); EmuiUpdateRing(animated.value, "LineageOS", active.version ?: "Archive"); Spacer(Modifier.height(24.dp)); Text(if (active.status == "Paused") "Paused" else if (active.status == "Queued") "Preparing…" else "Downloading…", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(6.dp)); Text(percent?.let { "$it%" } ?: "Preparing", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(8.dp)); Text(active.filename, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(active.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(22.dp)); if (active.status == "Paused") Button(onClick = { DownloadHelper.resume(context, active) }, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(7.dp)); Text("Resume") } else OutlinedButton(onClick = { DownloadHelper.pause(context, active.id) }, shape = RoundedCornerShape(18.dp)) { Text("Pause") } }
+            val animated = animateFloatAsState(
+                (percent ?: 0) / 100f,
+                tween(450),
+                label = "download-progress"
+            )
+
+            Column(
+                Modifier.fillMaxSize().padding(bottom = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(24.dp))
+                EmuiUpdateRing(
+                    animated.value,
+                    "LineageOS",
+                    active.version ?: "Archive"
+                )
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    when (active.status) {
+                        "Paused" -> "Paused"
+                        "Queued" -> "Preparing…"
+                        else -> "Downloading…"
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    percent?.let { "$it%" } ?: "Preparing",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    active.filename,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    active.device,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(22.dp))
+
+                if (active.status == "Paused") {
+                    Button(
+                        onClick = { DownloadHelper.resume(context, active) },
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Icon(Icons.Default.Download, null)
+                        Spacer(Modifier.width(7.dp))
+                        Text("Resume")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { DownloadHelper.pause(context, active.id) },
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Text("Pause")
+                    }
+                }
+            }
         } else {
-            Text("Downloads", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp)); if (flashCapability.ready) { GlassCard { SettingRow(Icons.Default.Build, "TWRP flashing available", "Root and TWRP were detected. Verified downloaded ZIPs can be handed to TWRP."); }; Spacer(Modifier.height(10.dp)) } if (flashMessage != null) { ErrorCard(flashMessage, onDismissFlashMessage); Spacer(Modifier.height(10.dp)) } if (downloads.isEmpty()) EmptyState(Icons.Default.Download, "No downloads yet", "Downloaded builds will appear here.") else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(downloads.asReversed()) { DownloadHistoryCard(it, flashCapability, onFlash) } }
+            Text(
+                "Downloads",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(10.dp))
+
+            if (flashCapability.ready) {
+                GlassCard {
+                    SettingRow(
+                        Icons.Default.Build,
+                        "TWRP flashing available",
+                        "Root and TWRP were detected. Verified downloaded ZIPs can be handed to TWRP."
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
+            if (flashMessage != null) {
+                ErrorCard(flashMessage, onDismissFlashMessage)
+                Spacer(Modifier.height(10.dp))
+            }
+
+            if (downloads.isEmpty()) {
+                EmptyState(
+                    Icons.Default.Download,
+                    "No downloads yet",
+                    "Downloaded builds will appear here."
+                )
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 20.dp)
+                ) {
+                    items(downloads.asReversed()) {
+                        DownloadHistoryCard(it, flashCapability, onFlash)
+                    }
+                }
+            }
         }
     }
 }
