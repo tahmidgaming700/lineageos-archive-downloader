@@ -34,7 +34,7 @@ fun ToolsScreen(
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
         item {
-            GlassCard {
+            ToolsCard {
                 Text("Flashing & tools", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -52,7 +52,7 @@ fun ToolsScreen(
         }
 
         item {
-            GlassCard {
+            ToolsCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Recovery flash", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("OpenRecoveryScript", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -78,7 +78,7 @@ fun ToolsScreen(
         }
 
         item {
-            GlassCard {
+            ToolsCard {
                 Text("dd image flasher", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 Text("Root-only raw image flashing to an explicitly selected by-name partition. This can permanently brick a device if the image or target is wrong.", color = MaterialTheme.colorScheme.error)
@@ -102,7 +102,7 @@ fun ToolsScreen(
         }
 
         item {
-            GlassCard {
+            ToolsCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("GApps Downloader", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     IconButton(onClick = onRefresh) { Icon(Icons.Default.Download, "Refresh GApps") }
@@ -115,7 +115,7 @@ fun ToolsScreen(
         }
 
         item {
-            GlassCard {
+            ToolsCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Magisk Downloader", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     IconButton(onClick = onRefresh) { Icon(Icons.Default.Download, "Refresh Magisk") }
@@ -126,7 +126,7 @@ fun ToolsScreen(
             }
         }
 
-        error?.let { item { ErrorCard(it, onRefresh) } }
+        error?.let { item { ToolsCard { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = onRefresh) { Text("Try again") } } } }
     }
 
     pendingRecovery?.let { (item, recovery) ->
@@ -207,4 +207,14 @@ private fun formatAddonBytes(size: Long): String = when {
     size < 1024L * 1024L -> String.format(Locale.US, "%.1f KB", size / 1024.0)
     size < 1024L * 1024L * 1024L -> String.format(Locale.US, "%.1f MB", size / (1024.0 * 1024.0))
     else -> String.format(Locale.US, "%.2f GB", size / (1024.0 * 1024.0 * 1024.0))
+}
+
+@Composable
+private fun ToolsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp)
+    ) {
+        Column(Modifier.padding(18.dp), content = content)
+    }
 }
