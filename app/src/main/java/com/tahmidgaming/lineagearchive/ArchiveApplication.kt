@@ -6,5 +6,6 @@ class ArchiveApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         LineageRepository.initialize(this)
+        AddonRepository.initialize(this)
     }
 }
