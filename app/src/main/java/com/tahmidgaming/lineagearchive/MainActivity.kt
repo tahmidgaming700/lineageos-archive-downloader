@@ -295,11 +295,19 @@ private fun CheckingContent() {
 }
 
 @Composable
-private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?, latest: LineageFile?, latestBuild: LineageBuild?, loading: Boolean, error: String?, onRefresh: () -> Unit, onChoose: () -> Unit, onDownloads: () -> Unit, onArchive: () -> Unit, onDownload: (LineageFile, String?) -> Unit) {
+private fun HomeContent(detected: DeviceDetector.Info, selected: LineageDevice?, latest: LineageFile?, latestBuild: LineageBuild?, loading: Boolean, error: String?, flashCapability: FlashManager.Capability, downloads: List<DownloadStore.Item>, onRefresh: () -> Unit, onChoose: () -> Unit, onDownloads: () -> Unit, onArchive: () -> Unit, onDownload: (LineageFile, String?) -> Unit, onFlash: (DownloadStore.Item) -> Unit) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp)) {
         item { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Software Update", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("LineageOS Archive Downloader", color = MaterialTheme.colorScheme.onSurfaceVariant) }; IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Check again") } } }
         item { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(Icons.Default.PhoneAndroid); Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text("This device", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${detected.manufacturer} ${detected.model}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("${detected.device} • ${detected.product}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }; Spacer(Modifier.height(12.dp)); StatusPill(if (selected != null) "Supported • ${selected.name}" else "Select a supported device", if (selected != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) } }
-        item { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Latest build", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); if (latestBuild != null && latest != null) { Spacer(Modifier.height(4.dp)); Text("LineageOS ${latestBuild.version ?: ""}".trim(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text(formatDate(latestBuild.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) } else if (!loading) Text("No current build found", color = MaterialTheme.colorScheme.onSurfaceVariant) }; if (latest != null && latestBuild != null) FilledIconButton(onClick = { onDownload(latest, latestBuild.version) }) { Icon(Icons.Default.Download, "Download latest build") } }; if (loading) { Spacer(Modifier.height(16.dp)); LinearProgressIndicator(Modifier.fillMaxWidth()) } else if (latest != null) { Spacer(Modifier.height(14.dp)); BuildMetaRow("Package", latest.filename); BuildMetaRow("Size", formatBytes(latest.size)); BuildMetaRow("Security patch", latest.os_patch_level ?: "Not supplied"); latest.sha256?.let { BuildMetaRow("SHA-256", it.take(16) + "…") } } } }
+        item { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Latest build", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); if (latestBuild != null && latest != null) { Spacer(Modifier.height(4.dp)); Text("LineageOS ${latestBuild.version ?: ""}".trim(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text(formatDate(latestBuild.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) } else if (!loading) Text("No current build found", color = MaterialTheme.colorScheme.onSurfaceVariant) }; if (latest != null && latestBuild != null) FilledIconButton(onClick = { onDownload(latest, latestBuild.version) }) { Icon(Icons.Default.Download, "Download latest build") } }; if (loading) { Spacer(Modifier.height(16.dp)); LinearProgressIndicator(Modifier.fillMaxWidth()) } else if (latest != null) { Spacer(Modifier.height(14.dp)); BuildMetaRow("Package", latest.filename); BuildMetaRow("Size", formatBytes(latest.size)); BuildMetaRow("Security patch", latest.os_patch_level ?: "Not supplied"); latest.sha256?.let { BuildMetaRow("SHA-256", it.take(16) + "…") }
+                    downloads.firstOrNull { it.filename == latest.filename && it.status.startsWith("Downloaded") && it.verified == true }?.let {
+                        if (flashCapability.ready) {
+                            Spacer(Modifier.height(10.dp))
+                            OutlinedButton(onClick = { onFlash(it) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                                Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flash with TWRP")
+                            }
+                        }
+                    } } } }
         error?.let { item { ErrorCard(it, onRefresh) } }
         item { Button(onClick = onChoose, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(20.dp)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Choose device", fontWeight = FontWeight.SemiBold) } }
         item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick = onArchive, enabled = selected != null, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Archive, null); Spacer(Modifier.width(6.dp)); Text("Archive") }; OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("Downloads") } } }
@@ -318,13 +326,21 @@ private fun DeviceContent(devices: List<LineageDevice>, query: String, onQuery: 
 }
 
 @Composable
-private fun BuildContent(selected: LineageDevice?, builds: List<LineageBuild>, loading: Boolean, error: String?, onDownload: (LineageFile, String?) -> Unit) {
+private fun BuildContent(selected: LineageDevice?, builds: List<LineageBuild>, loading: Boolean, error: String?, flashCapability: FlashManager.Capability, downloads: List<DownloadStore.Item>, onFlash: (DownloadStore.Item) -> Unit, onDownload: (LineageFile, String?) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         selected?.let { Text(it.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Official LineageOS builds", color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(12.dp)) }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth()); error?.let { ErrorCard(it) }
         if (!loading && builds.isEmpty() && error == null) EmptyState(Icons.Default.SystemUpdate, "No builds found", "The official updater returned no builds for this device.")
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) { items(builds) { build -> build.files.firstOrNull()?.let { file ->
-            GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("LineageOS ${build.version ?: ""}".trim(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(formatDate(build.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) }; FilledIconButton(onClick = { onDownload(file, build.version) }) { Icon(Icons.Default.Download, "Download") } }; Spacer(Modifier.height(10.dp)); BuildMetaRow("Package", file.filename); BuildMetaRow("Size", formatBytes(file.size)); BuildMetaRow("Patch", file.os_patch_level ?: "Not supplied"); file.sha256?.let { BuildMetaRow("SHA-256", it.take(20) + "…") } }
+            GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("LineageOS ${build.version ?: ""}".trim(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(formatDate(build.datetime), color = MaterialTheme.colorScheme.onSurfaceVariant) }; FilledIconButton(onClick = { onDownload(file, build.version) }) { Icon(Icons.Default.Download, "Download") } }; Spacer(Modifier.height(10.dp)); BuildMetaRow("Package", file.filename); BuildMetaRow("Size", formatBytes(file.size)); BuildMetaRow("Patch", file.os_patch_level ?: "Not supplied"); file.sha256?.let { BuildMetaRow("SHA-256", it.take(20) + "…") }
+            downloads.firstOrNull { it.filename == file.filename && it.status.startsWith("Downloaded") && it.verified == true }?.let {
+                if (flashCapability.ready) {
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(onClick = { onFlash(it) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                        Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flash with TWRP")
+                    }
+                }
+            } }
         } } }
     }
 }
