@@ -42,6 +42,20 @@ object AddonRepository {
             }
     }
 
+    suspend fun recoveryUpdates(deviceCodename: String): Pair<AddonDownload?, AddonDownload?> = coroutineScope {
+        val twrp = async {
+            runCatching { api.githubReleases("TeamWin", "TWRP", 10).firstOrNull() }.getOrNull()
+        }
+        val fox = async {
+            runCatching { api.githubReleases("OrangeFoxRecovery", "OrangeFox", 10).firstOrNull() }.getOrNull()
+        }
+        val twrpAsset = twrp.await()?.assets?.firstOrNull { it.name.contains(deviceCodename, true) && it.name.endsWith(".img", true) }
+            ?.let { AddonDownload(it.name, twrp.await()?.tag_name ?: "", it.size, it.digest?.removePrefix("sha256:"), it.browser_download_url, "TeamWin/TWRP") }
+        val foxAsset = fox.await()?.assets?.firstOrNull { it.name.contains(deviceCodename, true) && (it.name.endsWith(".zip", true) || it.name.endsWith(".img", true)) }
+            ?.let { AddonDownload(it.name, fox.await()?.tag_name ?: "", it.size, it.digest?.removePrefix("sha256:"), it.browser_download_url, "OrangeFoxRecovery/OrangeFox") }
+        twrpAsset to foxAsset
+    }
+
     suspend fun gapps(): List<AddonDownload> = coroutineScope {
         val repos = api.gappsRepos()
             .filterNot { it.archived }
