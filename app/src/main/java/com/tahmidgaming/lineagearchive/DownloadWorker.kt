@@ -27,7 +27,7 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         val id = inputData.getString(KEY_ID) ?: return@withContext Result.failure()
         val filename = inputData.getString(KEY_FILENAME) ?: return@withContext Result.failure()
         val url = inputData.getString(KEY_URL) ?: return@withContext Result.failure()
-        val expected = inputData.getString(KEY_SHA256)
+        val expected = inputData.getString(KEY_SHA256)?.trim()?.takeIf { it.isNotBlank() }
         val expectedSize = inputData.getLong(KEY_SIZE, -1L).takeIf { it >= 0 }
         if (DownloadStore.items(applicationContext).none { it.id == id }) return@withContext Result.failure()
 
@@ -36,20 +36,56 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
         val part = File(applicationContext.cacheDir, "downloads/$id.part").apply { parentFile?.mkdirs() }
         var existing = if (part.exists()) part.length() else 0L
-        val builder = Request.Builder().url(url)
+
+        // A complete leftover .part file is safe to verify directly.
+        if (expectedSize != null && existing == expectedSize) {
+            return@withContext finishVerified(id, filename, part, expected, expectedSize)
+        }
+
+        val builder = Request.Builder()
+            .url(url)
+            .header("Accept", "application/zip,application/octet-stream,*/*")
+            .header("User-Agent", "LineageOS-Archive-Downloader")
         if (existing > 0) builder.header("Range", "bytes=$existing-")
-        val response = try { client.newCall(builder.build()).execute() } catch (e: Exception) {
-            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = e.message ?: "Network error") }
+
+        val response = try {
+            client.newCall(builder.build()).execute()
+        } catch (e: Exception) {
+            DownloadStore.update(applicationContext, id) {
+                it.copy(status = "Waiting for network", error = e.message ?: "Network error")
+            }
             return@withContext Result.retry()
         }
+
         response.use { r ->
+            // A stale byte range is not a fatal download error. Restart cleanly.
+            if (r.code == 416 && existing > 0) {
+                if (expectedSize != null && existing == expectedSize) {
+                    return@withContext finishVerified(id, filename, part, expected, expectedSize)
+                }
+                part.delete()
+                return@withContext Result.retry()
+            }
+
             if (!r.isSuccessful && r.code != 206) {
-                DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "HTTP ${r.code}") }
+                val message = "HTTP ${r.code}" + if (r.code == 403) " • download server rejected the request" else ""
+                DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = message) }
                 return@withContext Result.failure()
             }
-            if (r.code == 200 && existing > 0) { part.delete(); existing = 0L }
-            val body = r.body ?: return@withContext Result.failure()
-            val total = if (r.code == 206) existing + body.contentLength() else body.contentLength()
+
+            if (r.code == 200 && existing > 0) {
+                part.delete()
+                existing = 0L
+            }
+
+            val body = r.body ?: run {
+                DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Empty download response") }
+                return@withContext Result.failure()
+            }
+
+            val bodyLength = body.contentLength()
+            val total = if (r.code == 206 && bodyLength >= 0) existing + bodyLength else bodyLength
+
             body.byteStream().use { input ->
                 FileOutputStream(part, existing > 0).use { output ->
                     copyWithProgress(input, output, existing, total, filename, id)
@@ -57,25 +93,59 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             }
         }
 
-        if (isStopped) return@withContext Result.retry()
+        if (isStopped) {
+            DownloadStore.update(applicationContext, id) { it.copy(status = "Paused") }
+            return@withContext Result.retry()
+        }
+
+        finishVerified(id, filename, part, expected, expectedSize)
+    }
+
+    private fun finishVerified(
+        id: String,
+        filename: String,
+        part: File,
+        expected: String?,
+        expectedSize: Long?
+    ): Result {
+        if (!part.exists()) {
+            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Partial file is missing") }
+            return Result.failure()
+        }
+
         if (expectedSize != null && part.length() != expectedSize) {
-            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Size mismatch") }
-            return@withContext Result.failure()
+            DownloadStore.update(applicationContext, id) {
+                it.copy(status = "Failed", error = "Size mismatch: ${part.length()} / $expectedSize bytes")
+            }
+            return Result.failure()
         }
 
         val actual = sha256(part)
         if (expected != null && !expected.equals(actual, ignoreCase = true)) {
-            DownloadStore.update(applicationContext, id) { it.copy(status = "SHA-256 FAILED", verified = false, error = "Expected $expected, got $actual") }
+            DownloadStore.update(applicationContext, id) {
+                it.copy(status = "SHA-256 FAILED", verified = false, error = "Expected $expected, got $actual")
+            }
             part.delete()
-            return@withContext Result.failure()
+            return Result.failure()
         }
 
-        try { publishToDownloads(part, filename) } catch (e: Exception) {
-            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = e.message ?: "Unable to save file") }
-            return@withContext Result.failure()
+        try {
+            publishToDownloads(part, filename)
+        } catch (e: Exception) {
+            DownloadStore.update(applicationContext, id) {
+                it.copy(status = "Failed", error = e.message ?: "Unable to save file")
+            }
+            return Result.failure()
         }
-        DownloadStore.update(applicationContext, id) { it.copy(status = if (expected == null) "Downloaded • SHA-256 unavailable" else "Downloaded • SHA-256 PASS", verified = expected?.let { true }) }
-        Result.success()
+
+        DownloadStore.update(applicationContext, id) {
+            it.copy(
+                status = if (expected == null) "Downloaded • SHA-256 unavailable" else "Downloaded • SHA-256 PASS",
+                verified = expected?.let { true },
+                error = null
+            )
+        }
+        return Result.success()
     }
 
     private fun copyWithProgress(input: InputStream, output: OutputStream, base: Long, total: Long, filename: String, id: String) {
@@ -107,14 +177,20 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
                 put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("Unable to create Downloads entry")
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: error("Unable to create Downloads entry")
             try {
-                resolver.openOutputStream(uri)?.use { out -> part.inputStream().use { it.copyTo(out) } } ?: error("Unable to open Downloads entry")
+                resolver.openOutputStream(uri)?.use { out ->
+                    part.inputStream().use { it.copyTo(out) }
+                } ?: error("Unable to open Downloads entry")
                 resolver.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
-            } catch (e: Exception) { resolver.delete(uri, null, null); throw e }
+            } catch (e: Exception) {
+                resolver.delete(uri, null, null)
+                throw e
+            }
         } else {
             val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            dir.mkdirs()
+            if (!dir.exists() && !dir.mkdirs()) error("Unable to create Downloads directory")
             part.copyTo(File(dir, filename), overwrite = true)
         }
         part.delete()
@@ -124,7 +200,11 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->
             val buffer = ByteArray(1024 * 1024)
-            while (true) { val n = input.read(buffer); if (n < 0) break; digest.update(buffer, 0, n) }
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                digest.update(buffer, 0, n)
+            }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
@@ -152,16 +232,25 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
     private fun updateNotification(filename: String, progress: Int) {
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID,
-            NotificationCompat.Builder(applicationContext, CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle(filename).setContentText("Downloading • $progress%")
-                .setProgress(100, progress, false).setOngoing(true).build())
+        manager.notify(
+            NOTIFICATION_ID,
+            NotificationCompat.Builder(applicationContext, CHANNEL)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle(filename)
+                .setContentText("Downloading • $progress%")
+                .setProgress(100, progress, false)
+                .setOngoing(true)
+                .build()
+        )
     }
 
     private fun ensureChannel() {
-        if (Build.VERSION.SDK_INT >= 26) applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
-            .let { it as NotificationManager }
-            .createNotificationChannel(NotificationChannel(CHANNEL, "ROM downloads", NotificationManager.IMPORTANCE_LOW))
+        if (Build.VERSION.SDK_INT >= 26) {
+            (applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .createNotificationChannel(
+                    NotificationChannel(CHANNEL, "ROM downloads", NotificationManager.IMPORTANCE_LOW)
+                )
+        }
     }
 
     companion object {
