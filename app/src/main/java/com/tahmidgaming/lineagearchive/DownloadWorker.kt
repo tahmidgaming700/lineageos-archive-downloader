@@ -45,7 +45,7 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         val builder = Request.Builder()
             .url(url)
             .header("Accept", "application/zip,application/octet-stream,*/*")
-            .header("User-Agent", "LineageOS-Archive-Downloader")
+            .header("User-Agent", "Huawei-OS-Updater")
         if (existing > 0) builder.header("Range", "bytes=$existing-")
 
         val response = try {
