@@ -89,7 +89,7 @@ object HuaweiFirmwareRepository {
      */
     private fun parseFiles(raw: String): List<FirmwareFile> {
         val output = linkedMapOf<String, FirmwareFile>()
-        val decoded = runCatching { URLDecoder.decode(raw, StandardCharsets.UTF_8.name()) }.getOrDefault(raw)
+        val decoded = raw.replace("&amp;", "&")
         val urls = Regex("""https?://[^\s"'<>\\]+""", RegexOption.IGNORE_CASE)
             .findAll(decoded)
             .map { it.value.trimEnd(',', ';', ')', ']', '}').replace("&amp;", "&") }
