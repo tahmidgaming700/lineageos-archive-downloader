@@ -1,49 +1,49 @@
-# LineageOS Archive Downloader
+# Huawei OS Updater
 
-A free, open-source Android downloader for LineageOS builds with post-download SHA-256 verification.
+A native Android application for searching Huawei/Honor firmware through the Huawei Firm Finder / compatible HiSuite Proxy workflow, then downloading packages with background progress and local integrity checks.
 
-## Version 1.0.0
+> **Status:** Native UI and download integration are under development. The website `https://professorjtj.github.io/` is a static JavaScript frontend. Its ROM-status and file-list actions call a compatible HiSuite Proxy service; it is not a documented public JSON firmware API. The app cannot query the site's search results unless a reachable compatible proxy is configured.
 
-The first public release focuses on a polished updater-style experience inspired by modern translucent system interfaces, while remaining a native Android application.
+## Native app features
 
-## Features
+- Native Jetpack Compose interface; no WebView-based app shell.
+- Firmware search fields for model, region, vendor/country and target version.
+- ROM status and file-list requests through a configurable HiSuite Proxy base URL.
+- Best-effort extraction of direct firmware package links from supported response formats.
+- Background downloads using WorkManager, with progress notifications and HTTP Range resume where the server supports it.
+- Local SHA-256 calculation after download, and comparison when a trusted checksum is supplied by the source.
+- Persistent download history.
+- Light, dark and system theme options.
+- Shortcuts to Firm Finder, Firm Finder v2, BaseArchive and downgrade resources.
 
-- Dynamically discovers LineageOS-supported devices from the official LineageOS device list.
-- Detects the Android device using manufacturer/model/product/device identifiers, with manual search as a fallback.
-- Checks the official LineageOS updater when the app starts and shows the latest returned build for a matched device.
-- Retrieves current build metadata from the official LineageOS updater API.
-- Shows LineageOS version, build date, filename, size, Android SDK, patch level and SHA-256.
-- Downloads ROM ZIPs to the public Android Downloads folder.
-- Background downloads with progress notifications.
-- Pause/resume support using a resumable partial file when the server supports HTTP Range requests.
-- Calculates SHA-256 locally after download and reports PASS/FAIL.
-- Includes older builds from the TimSchumi LineageOS Build Archive as a clearly separated archive source.
-- Polished light and dark themes with a Liquid Glass-inspired navigation layer and strong text contrast.
-- Downloader/checker only: no bootloader unlocking, flashing, recovery modification or partition changes.
+## Firmware search connection
 
-## Sources
+Default proxy address: `http://127.0.0.1:7777`
 
-### Official LineageOS
+That address means **the same device running the app**. It will only work if a compatible HiSuite Proxy service is running on the Android device itself. If the proxy runs on a computer or another device, set the base URL to that device's reachable LAN address, for example `http://192.168.1.20:7777`, and ensure the proxy accepts connections from the phone. Do not expose the proxy directly to the public internet.
 
-- Device metadata: `LineageOS/hudson` (`updater/devices.json`)
-- Current builds: `download.lineageos.org/api/v2/devices/{codename}/builds`
-- Build verification guidance: LineageOS Wiki
+The app uses the proxy's `/checkRom.txt` and `/getFile.txt` endpoints. Their request/response details may vary by proxy version. If the proxy returns an unfamiliar format, the app displays the raw response rather than claiming it found firmware.
 
-### Older builds
+## Download safety
 
-TimSchumi's archive is an independent, unofficial archive of old LineageOS builds. Archived builds may contain security issues and are unsupported by the LineageOS team. Always verify the SHA-256 and LineageOS signature before using an archived build.
+- Downloading firmware is not the same as installing it.
+- Verify the exact model, region, vendor and build before using a package.
+- SHA-256 is checked only when a trusted expected digest is available; a locally calculated digest by itself does not prove authenticity.
+- No automatic flashing, bootloader unlocking, partition modification or recovery installation is performed by the Finder screen.
 
-## Important limitations
+## Build
 
-LineageOS does not retain every historical build on its official download servers. This app therefore cannot promise every historical release. The Archive section is an additional, clearly labelled unofficial source and is not presented as an official LineageOS service.
+Open this repository in Android Studio or run:
 
-SHA-256 proves that the downloaded bytes match the expected digest. For stronger authenticity assurance, users should also follow LineageOS's official build-signature verification procedure.
+```bash
+gradle :app:assembleDebug
+```
 
-## Build and release
+GitHub Actions builds a debug APK for pushes to `main` and `huawei-os-updater`, pull requests, and manual workflow dispatches. The APK is a debug-signed development build, not a Play Store release.
 
-GitHub Actions builds the debug APK on pushes to `main` and pull requests. Version `1.0.0` is also assembled as a release APK and published to the GitHub Releases tab by the verified build workflow.
+## Original project
 
-The 1.0.0 CI release uses the standard debug signing key because no private production keystore is stored in the public repository. This keeps the source buildable without exposing a private signing key.
+This project started from the native LineageOS Archive Downloader codebase. The Huawei branch switches the launcher experience to a Huawei firmware finder and reuses the existing download worker, history store, resumable transfer logic and SHA-256 verification implementation.
 
 ## License
 
