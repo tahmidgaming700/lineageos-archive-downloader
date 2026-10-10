@@ -3,6 +3,7 @@ package com.tahmidgaming.lineagearchive
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -90,7 +91,7 @@ private fun HuaweiUpdaterApp(
     var region by remember { mutableStateOf("C636") }
     var vendor by remember { mutableStateOf("hw-eu") }
     var version by remember { mutableStateOf("") }
-    var proxy by remember { mutableStateOf(HuaweiFirmwareRepository.DEFAULT_PROXY) }
+    var proxy by remember { mutableStateOf(context.getSharedPreferences("huawei_settings", android.content.Context.MODE_PRIVATE).getString("proxy_url", HuaweiFirmwareRepository.DEFAULT_PROXY) ?: HuaweiFirmwareRepository.DEFAULT_PROXY) }
     var result by remember { mutableStateOf<HuaweiFirmwareRepository.Result?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -191,6 +192,18 @@ private fun HuaweiUpdaterApp(
                                 modifier = Modifier.fillMaxWidth(), label = { Text("Target version (optional)") },
                                 placeholder = { Text("e.g. 9.1.0.396") }, singleLine = true
                             )
+                            OutlinedButton(
+                                onClick = {
+                                    model = Build.MODEL.ifBlank { Build.DEVICE }.uppercase()
+                                    val detectedRegion = readSystemProperty("ro.product.CUSTCVersion")
+                                        .ifBlank { readSystemProperty("ro.build.version.cust") }
+                                        .uppercase()
+                                    if (Regex("C\\d{3}").containsMatchIn(detectedRegion)) {
+                                        region = Regex("C\\d{3}").find(detectedRegion)?.value ?: region
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Detect this device") }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(
                                     onClick = { runQuery(false) }, enabled = !busy && model.isNotBlank() && region.isNotBlank(),
@@ -316,7 +329,7 @@ private fun HuaweiUpdaterApp(
                             Text("HiSuite Proxy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text("Set the address of a compatible HiSuite Proxy service. Do not leave localhost unless the service is running on this same device.")
                             OutlinedTextField(
-                                value = proxy, onValueChange = { proxy = it },
+                                value = proxy, onValueChange = { proxy = it; context.getSharedPreferences("huawei_settings", android.content.Context.MODE_PRIVATE).edit().putString("proxy_url", it).apply() },
                                 modifier = Modifier.fillMaxWidth(), label = { Text("Proxy base URL") }, singleLine = true
                             )
                             Text("Current address: $proxy", style = MaterialTheme.typography.bodySmall)
@@ -394,3 +407,9 @@ private fun formatBytes(size: Long): String = when {
     size < 1024L * 1024L * 1024L -> String.format(java.util.Locale.US, "%.1f MB", size / (1024.0 * 1024.0))
     else -> String.format(java.util.Locale.US, "%.2f GB", size / (1024.0 * 1024.0 * 1024.0))
 }
+
+
+private fun readSystemProperty(name: String): String = runCatching {
+    val process = Runtime.getRuntime().exec(arrayOf("getprop", name))
+    process.inputStream.bufferedReader().use { it.readText() }.trim()
+}.getOrDefault("")
