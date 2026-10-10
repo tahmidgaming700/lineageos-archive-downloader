@@ -227,7 +227,7 @@ private fun HuaweiUpdaterApp(
                                             Text(file.url, style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
                                             Button(onClick = {
                                                 val item = LineageFile(file.filename, file.size, file.sha256, file.url)
-                                                DownloadHelper.enqueue(context, item, model, file.version ?: version.ifBlank { null })
+                                                DownloadHelper.enqueue(context, item, model, file.version ?: version.takeIf { it.isNotBlank() })
                                                 downloads = DownloadStore.items(context)
                                                 tab = HuaweiTab.DOWNLOADS
                                             }, modifier = Modifier.fillMaxWidth()) {
