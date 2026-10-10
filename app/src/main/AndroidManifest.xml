@@ -10,13 +10,14 @@
     <application
         android:name=".ArchiveApplication"
         android:allowBackup="true"
-        android:label="LineageOS Archive Downloader"
+        android:label="Huawei OS Updater"
         android:supportsRtl="true"
         android:theme="@style/Theme.LineageArchive"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher">
+        android:roundIcon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
-            android:name=".MainActivity"
+            android:name=".HuaweiMainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
