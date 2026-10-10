@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LineageOS Archive Downloader"
+rootProject.name = "Huawei OS Updater"
 include(":app")
