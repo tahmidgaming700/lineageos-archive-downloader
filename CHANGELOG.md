@@ -4,6 +4,8 @@ This file distinguishes confirmed repository history from planned work. An entry
 
 ## [2.0.0] — Development branch; not released
 
+- Introduced a new Android application ID, `com.tahmidgaming.lineageupdater`, so 2.0.0 installs as a separate app instead of replacing the legacy package. Existing 1.0.35/1.0.36 installations will not update in place.
+
 ### Implemented in the development branch
 - Added live GSI release discovery from community Treble/LineageOS GitHub sources, with clear compatibility warnings and source links.
 - Added a configurable Harmony Recovery release tracker using real GitHub release assets; it does not fabricate or build recovery images.
