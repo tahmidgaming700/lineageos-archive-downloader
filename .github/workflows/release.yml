@@ -104,9 +104,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "v$VERSION" app/build/outputs/apk/release/app-release.apk \
+          gh release create "v$VERSION" app/build/outputs/apk/release/app-release.apk app-release.sha256 \
             --repo "$GITHUB_REPOSITORY" \
-            --title "LineageOS Archive Downloader $VERSION" \
+            --title "Lineage Updater & Downloader $VERSION" \
             --generate-notes
 
       - name: Release already published
