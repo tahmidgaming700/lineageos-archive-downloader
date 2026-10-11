@@ -92,6 +92,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }
     var gapps by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
     var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
+    var gsis by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
     var toolsLoading by remember { mutableStateOf(false) }
     var toolsError by remember { mutableStateOf<String?>(null) }
     var toolsRefresh by remember { mutableStateOf(0) }
@@ -148,6 +149,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             runCatching {
                 gapps = AddonRepository.gapps()
                 magisk = AddonRepository.magisk()
+                gsis = AddonRepository.gsi()
             }.onFailure { toolsError = it.message ?: "Unable to load addon downloads" }
             toolsLoading = false
         }
@@ -250,6 +252,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         downloads = downloads,
                         gapps = gapps,
                         magisk = magisk,
+                        gsis = gsis,
                         loading = toolsLoading,
                         error = toolsError,
                         onRefresh = { toolsRefresh++ },
