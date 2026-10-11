@@ -50,24 +50,32 @@ object LineageRepository {
             .create(ArchiveBuildApi::class.java)
     }
 
+    fun buildsCacheKey(device: String): String = "builds_" + device.replace(Regex("[^A-Za-z0-9_-]"), "_")
+
+    fun isUsingCachedFallback(key: String): Boolean = cachePrefs.getBoolean(key + "_stale", false)
+
     suspend fun devices(): List<LineageDevice> = withContext(Dispatchers.IO) {
         val serializer = ListSerializer(LineageDevice.serializer())
         runCatching {
             deviceApi.devices().also { saveCache("devices", json.encodeToString(serializer, it)) }
         }.getOrElse { failure ->
             if (failure is CancellationException) throw failure
-            cachedJson("devices")?.let { json.decodeFromString(serializer, it) } ?: throw failure
+            val cached = cachedJson("devices") ?: throw failure
+            markCacheFallback("devices")
+            json.decodeFromString(serializer, cached)
         }
     }
 
     suspend fun builds(device: String): List<LineageBuild> = withContext(Dispatchers.IO) {
-        val key = "builds_" + device.replace(Regex("[^A-Za-z0-9_-]"), "_")
+        val key = buildsCacheKey(device)
         val serializer = ListSerializer(LineageBuild.serializer())
         runCatching {
             buildApi.builds(device).also { saveCache(key, json.encodeToString(serializer, it)) }
         }.getOrElse { failure ->
             if (failure is CancellationException) throw failure
-            cachedJson(key)?.let { json.decodeFromString(serializer, it) } ?: throw failure
+            val cached = cachedJson(key) ?: throw failure
+            markCacheFallback(key)
+            json.decodeFromString(serializer, cached)
         }
     }
 
@@ -77,7 +85,9 @@ object LineageRepository {
             archiveApi.builds().also { saveCache("archive_summaries", json.encodeToString(serializer, it)) }
         }.getOrElse { failure ->
             if (failure is CancellationException) throw failure
-            cachedJson("archive_summaries")?.let { json.decodeFromString(serializer, it) } ?: throw failure
+            val cached = cachedJson("archive_summaries") ?: throw failure
+            markCacheFallback("archive_summaries")
+            json.decodeFromString(serializer, cached)
         }
         all.filter { it.device.equals(device, ignoreCase = true) }
     }
@@ -90,7 +100,9 @@ object LineageRepository {
             }
         }.getOrElse { failure ->
             if (failure is CancellationException) throw failure
-            cachedJson(key)?.let { json.decodeFromString(ArchiveBuildDetail.serializer(), it) } ?: throw failure
+            val cached = cachedJson(key) ?: throw failure
+            markCacheFallback(key)
+            json.decodeFromString(ArchiveBuildDetail.serializer(), cached)
         }
     }
 
@@ -102,8 +114,13 @@ object LineageRepository {
         cachePrefs.edit()
             .putString(key, value)
             .putLong(key + "_updated", now)
+            .putBoolean(key + "_stale", false)
             .putLong("last_updated", now)
             .apply()
+    }
+
+    private fun markCacheFallback(key: String) {
+        cachePrefs.edit().putBoolean(key + "_stale", true).apply()
     }
 
     private fun cachedJson(key: String): String? =
