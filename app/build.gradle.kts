@@ -10,8 +10,8 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        // Android 6.0 (API 23) remains the current supported floor until all
-        // dependencies and the app have been validated on API 21/22.
+        applicationId = "com.tahmidgaming.lineageupdater"
+        // Android 6.0 (API 23) is the validated minimum SDK for this codebase.
         minSdk = 23
         targetSdk = 36
         versionCode = 2000
