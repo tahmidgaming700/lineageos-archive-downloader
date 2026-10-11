@@ -186,7 +186,11 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             val resolver = applicationContext.contentResolver
             val values = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, filename)
-                put(MediaStore.Downloads.MIME_TYPE, "application/zip")
+                put(MediaStore.Downloads.MIME_TYPE, when {
+                    filename.endsWith(".apk", true) -> "application/vnd.android.package-archive"
+                    filename.endsWith(".zip", true) -> "application/zip"
+                    else -> "application/octet-stream"
+                })
                 put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
