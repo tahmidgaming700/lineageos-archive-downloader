@@ -39,6 +39,10 @@ jobs:
           if [ -z "$VERSION" ]; then echo "Unable to read versionName"; exit 1; fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building version $VERSION"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match app version v$VERSION."
+            exit 1
+          fi
 
       - name: Check whether release exists
         id: existing
@@ -105,10 +109,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          sed "s/{{VERSION}}/$VERSION/g" .github/release-notes-template.md > release-notes.md
           gh release create "v$VERSION" app-updater.apk app-updater.sha256 \
             --repo "$GITHUB_REPOSITORY" \
             --title "Lineage Updater & Downloader $VERSION" \
-            --generate-notes
+            --notes-file release-notes.md
 
       - name: Release already published
         if: steps.existing.outputs.exists == 'true'
