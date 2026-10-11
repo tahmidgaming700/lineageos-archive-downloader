@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, TOOLS, UPDATES, SETTINGS, CHANGELOG, DIAGNOSTICS, SUPPORT, HARMONY_BUILD }
+private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, TOOLS, GSI, UPDATES, SETTINGS, CHANGELOG, DIAGNOSTICS, SUPPORT, HARMONY_BUILD }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,12 +157,14 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     }
 
     LaunchedEffect(screen, toolsRefresh) {
-        if (screen == Screen.TOOLS) {
+        if (screen == Screen.TOOLS || screen == Screen.GSI) {
             toolsLoading = true
             toolsError = null
             runCatching {
-                gapps = AddonRepository.gapps()
-                magisk = AddonRepository.magisk()
+                if (screen == Screen.TOOLS) {
+                    gapps = AddonRepository.gapps()
+                    magisk = AddonRepository.magisk()
+                }
                 gsis = AddonRepository.gsi()
             }.onFailure { toolsError = it.message ?: "Unable to load addon downloads" }
             toolsLoading = false
@@ -284,11 +286,15 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         loading = toolsLoading,
                         error = toolsError,
                         onRefresh = { toolsRefresh++ },
+                        onOpenGsi = { screen = Screen.GSI },
                         onOpenHarmonyBuild = { screen = Screen.HARMONY_BUILD },
                         onDownloadAddon = { addon ->
                             startDownload(LineageFile(addon.name, addon.size, addon.sha256, addon.url), "addons", addon.version)
                         }
                     )
+                    Screen.GSI -> GsiDiscoveryScreen(gsis, toolsLoading, toolsError, { toolsRefresh++ }) { addon ->
+                        startDownload(LineageFile(addon.name, addon.size, addon.sha256, addon.url), "gsi", addon.version)
+                    }
                     Screen.SETTINGS -> SettingsContent(themeMode, onThemeModeChange, { screen = Screen.CHANGELOG }, { screen = Screen.DIAGNOSTICS }, { screen = Screen.SUPPORT })
                     Screen.CHANGELOG -> ChangelogContent()
                     Screen.DIAGNOSTICS -> DiagnosticsContent(context, detected, selected, flashCapability, downloads)
@@ -349,6 +355,7 @@ private fun titleFor(screen: Screen) = when (screen) {
     Screen.ARCHIVE -> "Archive"
     Screen.DOWNLOADS -> "Software update"
     Screen.TOOLS -> "Flashing & tools"
+    Screen.GSI -> "GSI Discovery"
     Screen.UPDATES -> "Updates"
     Screen.SETTINGS -> "Settings"
     Screen.CHANGELOG -> "Changelog"
