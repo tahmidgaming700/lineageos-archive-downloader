@@ -1,24 +1,33 @@
 # Changelog
 
-All entries below describe changes confirmed by repository commits or releases. Older releases are linked to their GitHub release notes where available; this file does not infer undocumented historical features.
+This file distinguishes confirmed repository history from planned work. An entry is not evidence that a version was published unless a matching GitHub release or tag exists.
 
-## [1.0.37] - Unreleased
+## [2.0.0] — Development branch; not released
 
-### Fixed
+### Development foundation
+- Added a release gate document covering signing identity, upgrade compatibility, testing, verification and publication.
+- Added contribution and security-reporting guidance.
+- Set the development version to 2.0.0 (version code 2000) on the `release/2.0.0-foundation` branch.
+- Updated project documentation to distinguish implemented functionality from planned work.
+
+### Not yet claimed
+The GSI discovery, full Harmony Recovery build orchestration, secure self-updater, broader recovery tracking and all requested device compatibility testing are not claimed complete by this foundation commit. Do not publish a release until implementation and validation gates are met.
+
+## [1.0.37] — Unreleased on the previous default branch
+
 - Reject malformed or non-HTTP(S) download URLs before starting network work.
 - Reject unsafe download filenames containing path separators or control characters.
-- Reject an unsolicited HTTP 206 Partial Content response when no resume range was requested, preventing a partial payload from being treated as a complete download.
-- Queue each download as unique work so rapid taps or repeated resume actions do not start duplicate workers for the same download ID.
+- Reject unsolicited HTTP 206 Partial Content when no resume range was requested.
+- Queue each download as unique work to reduce duplicate workers for the same download ID.
 
-### Validation status
-- Changes committed to the default branch; the GitHub Actions build and release workflow must finish successfully before this version is considered released.
-- No physical-device test is claimed by this entry.
+The repository's latest CI release workflow for the default branch reported a build failure on 2026-10-11. Check [Actions](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions) for current results. No physical-device test is claimed here.
 
-## Historical releases
+## Historical published releases
 
-- [1.0.36](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.36) — published release; consult the release and linked commit history for confirmed details.
-- [1.0.35](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.35) — published release; consult the release and linked commit history for confirmed details.
-- [1.0.32](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.32) — published release; consult the release and linked commit history for confirmed details.
-- [1.0.31](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.31) — published release; consult the release and linked commit history for confirmed details.
+- [1.0.36](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.36) — published release.
+- [1.0.35](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.35) — published release.
+- [1.0.32](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.32) — published release.
+- [1.0.31](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.31) — published release.
 - [1.0.3](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.3), [1.0.1](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.1), and [1.0.0](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v1.0.0) — published releases.
-- Intermediate versions not represented by a published tag or confirmed commit are undocumented here rather than reconstructed from guesswork.
+
+Versions not supported by a published tag, release, or verified commit history remain undocumented rather than being assigned invented features or dates. The skipped 1.0.3.4 entry is recorded only as the project owner's account, not as a verified release.

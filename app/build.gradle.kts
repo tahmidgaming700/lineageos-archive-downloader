@@ -10,16 +10,20 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.tahmidgaming.lineagearchive"
-        // Android 6.0 (API 23) compatibility floor: Samsung TouchWiz through Android 16.
+        // Android 6.0 (API 23) remains the current supported floor until all
+        // dependencies and the app have been validated on API 21/22.
         minSdk = 23
         targetSdk = 36
-        versionCode = 1037
-        versionName = "1.0.37"
+        versionCode = 2000
+        versionName = "2.0.0"
     }
 
     buildTypes {
         release {
+            // TEMPORARY: preserves the existing CI build behaviour only.
+            // A public production release must use the same private signing
+            // identity as the installed app; do not publish this build as an
+            // in-place upgrade until signature compatibility is confirmed.
             signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
         }
