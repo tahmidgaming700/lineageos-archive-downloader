@@ -35,7 +35,7 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Invalid download URL: only valid HTTP(S) links are accepted") }
             return@withContext Result.failure()
         }
-        if (filename.isBlank() || filename == "." || filename == ".." || filename.any { it == '/' || it == '\\\\' || it.code < 32 }) {
+        if (filename.isBlank() || filename == "." || filename == ".." || filename.any { it == '/' || it == '\\' || it.code < 32 }) {
             DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Invalid download filename") }
             return@withContext Result.failure()
         }
