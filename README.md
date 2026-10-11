@@ -1,50 +1,78 @@
-# LineageOS Archive Downloader
+# Lineage Updater & Downloader
 
-A free, open-source Android downloader for LineageOS builds with post-download SHA-256 verification.
+A native Android utility for discovering LineageOS builds, browsing historical archives, downloading ROM packages, and checking file integrity.
 
-## Version 1.0.0
+> **Development build:** Version 2.0.0 is under development. Do not treat this branch as a published or production-ready release. Advanced GSI, DD Flasher, and Harmony Recovery work must be considered available only to the extent implemented and tested in the source.
 
-The first public release focuses on a polished updater-style experience inspired by modern translucent system interfaces, while remaining a native Android application.
+## Project status
 
-## Features
+- Development branch: `release/2.0.0-foundation`
+- Application ID: `com.tahmidgaming.lineagearchive`
+- Development version: `2.0.0` (version code `2000`)
+- Current Android minimum SDK: API 23 (Android 6.0). Android 5.0/5.0.2 is **not supported** by this build.
+- Release status: **not published**
+- Release signing: the current Gradle release variant still references the debug signing configuration. A production release must not be advertised as an in-place update until the signing certificate is confirmed compatible with the installed app.
 
-- Dynamically discovers LineageOS-supported devices from the official LineageOS device list.
-- Detects the Android device using manufacturer/model/product/device identifiers, with manual search as a fallback.
-- Checks the official LineageOS updater when the app starts and shows the latest returned build for a matched device.
-- Retrieves current build metadata from the official LineageOS updater API.
-- Shows LineageOS version, build date, filename, size, Android SDK, patch level and SHA-256.
-- Downloads ROM ZIPs to the public Android Downloads folder.
-- Background downloads with progress notifications.
-- Pause/resume support using a resumable partial file when the server supports HTTP Range requests.
-- Calculates SHA-256 locally after download and reports PASS/FAIL.
-- Includes older builds from the TimSchumi LineageOS Build Archive as a clearly separated archive source.
-- Polished light and dark themes with a Liquid Glass-inspired navigation layer and strong text contrast.
-- Downloader/checker only: no bootloader unlocking, flashing, recovery modification or partition changes.
+## Existing functionality
 
-## Sources
+The existing application includes these capabilities (check the current default branch and latest CI results for current status):
 
-### Official LineageOS
+- Discovers devices using LineageOS device metadata.
+- Queries the official LineageOS updater API for current build metadata.
+- Displays available build details including filename, size and published checksum when provided.
+- Downloads ROM ZIPs with background progress notifications.
+- Supports resume when the server supports HTTP range requests.
+- Calculates SHA-256 after download when a trusted expected digest is available.
+- Separates TimSchumi historical builds from official current releases.
+- Offers light, dark and system theme options.
+- Includes tool screens for recovery/image workflows and add-on downloads; root and device limitations apply.
 
-- Device metadata: `LineageOS/hudson` (`updater/devices.json`)
-- Current builds: `download.lineageos.org/api/v2/devices/{codename}/builds`
-- Build verification guidance: LineageOS Wiki
+## Source labels and safety
 
-### Older builds
+### Official LineageOS sources
+- Device metadata: [LineageOS hudson](https://github.com/LineageOS/hudson)
+- Current build API: `https://download.lineageos.org/api/v2/devices/{codename}/builds`
+- Verification instructions: [LineageOS Wiki](https://wiki.lineageos.org/)
 
-TimSchumi's archive is an independent, unofficial archive of old LineageOS builds. Archived builds may contain security issues and are unsupported by the LineageOS team. Always verify the SHA-256 and LineageOS signature before using an archived build.
+### Historical archives
+The TimSchumi archive is an independent, unofficial archive. Historical packages can be unsupported or vulnerable. Do not interpret their availability as official support.
 
-## Important limitations
+### Integrity is not authenticity
+SHA-256 can establish that downloaded bytes match a known expected digest. It does not, by itself, prove who produced the file. Follow the ROM project's signature-verification guidance where applicable.
 
-LineageOS does not retain every historical build on its official download servers. This app therefore cannot promise every historical release. The Archive section is an additional, clearly labelled unofficial source and is not presented as an official LineageOS service.
+## Version 2.0.0 development plan
 
-SHA-256 proves that the downloaded bytes match the expected digest. For stronger authenticity assurance, users should also follow LineageOS's official build-signature verification procedure.
+See [the release gate and implementation checklist](docs/RELEASE_2.0.0_PLAN.md). The plan includes:
 
-## Build and release
+- Preserve the existing downloader and migrate data safely.
+- Improve device/build discovery, caching and download verification.
+- Add explainable GSI compatibility discovery and recovery update tracking.
+- Develop DD Flasher only for supported workflows, with explicit destructive-action confirmation.
+- Develop Harmony Recovery configuration/build orchestration without fabricating build artifacts.
+- Add secure application-update metadata and release verification.
+- Improve documentation, tests and CI.
 
-GitHub Actions builds the debug APK on pushes to `main` and pull requests. Version `1.0.0` is also assembled as a release APK and published to the GitHub Releases tab by the verified build workflow.
+Items in a plan are not claims that those features are already complete. See [CHANGELOG.md](CHANGELOG.md) for confirmed changes and [GitHub Actions](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions) for actual build results.
 
-The 1.0.0 CI release uses the standard debug signing key because no private production keystore is stored in the public repository. This keeps the source buildable without exposing a private signing key.
+## Build from source
 
-## License
+Requirements: Android SDK, JDK 17, and Gradle 8.11.1 (or use the repository's configured GitHub Actions workflow).
 
-Apache License 2.0.
+```bash
+gradle :app:assembleDebug --stacktrace
+gradle :app:testDebugUnitTest --stacktrace
+```
+
+The commands above are instructions, not a claim that they have passed in this environment. Install the debug APK only after reviewing the build output and understanding its signing identity.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md). Security reports should follow [SECURITY.md](SECURITY.md).
+
+## Support development
+
+Voluntary support can help fund development time, test devices, build infrastructure, documentation and compatibility testing. No donation link has been configured or verified for this project yet; no payment link is intentionally displayed here. To contribute now, use issues and pull requests on [GitHub](https://github.com/tahmidgaming700/lineageos-archive-downloader).
+
+## Licence
+
+The repository has no licence metadata detected by the GitHub API at the time of this audit, although the existing README states Apache License 2.0. Confirm that the repository contains the appropriate LICENSE file and third-party notices before representing the licence as verified.
