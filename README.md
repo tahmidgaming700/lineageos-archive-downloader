@@ -1,13 +1,13 @@
 # Lineage Updater & Downloader
 
-A native Android utility for discovering LineageOS builds, browsing historical archives, downloading ROM packages, and checking file integrity.
+A native Android utility for discovering LineageOS builds, browsing historical archives, downloading ROM packages, and checking file integrity. Version 2.0.0 uses a new Android package identity and installs separately from the legacy downloader.
 
 > **Development build:** Version 2.0.0 is under development and is not yet published. GSI discovery, recovery release tracking, and APK installation safeguards are implemented in this branch, but they still need broader device testing. DD flashing is root-only and destructive. Harmony Recovery is a configurable GitHub release tracker; it does not build a recovery image.
 
 ## Project status
 
-- Development branch: `release/2.0.0-foundation`
-- Application ID: `com.tahmidgaming.lineagearchive`
+- Development branch: `release/2.0.0-completion`
+- Application ID: `com.tahmidgaming.lineageupdater`
 - Development version: `2.0.0` (version code `2000`)
 - Current Android minimum SDK: API 23 (Android 6.0). Android 5.0/5.0.2 is **not supported** by this build.
 - Release status: **not published**
