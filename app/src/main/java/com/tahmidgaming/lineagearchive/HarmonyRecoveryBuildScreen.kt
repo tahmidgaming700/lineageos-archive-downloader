@@ -131,12 +131,12 @@ fun HarmonyRecoveryBuildScreen(context: Context) {
                                     # Harmony Recovery build plan for device: $codename
                                     # Run only on a Linux build host with the required toolchain and disk space.
                                     # Confirm the manifest, branch, device tree and build target with the project maintainers.
-                                    WORKDIR="${HOME}/harmony-recovery-$codename"
-                                    mkdir -p "$WORKDIR"
+                                    WORKDIR="${'$'}{HOME}/harmony-recovery-$codename"
+                                    mkdir -p "${'$'}WORKDIR"
                                     cd "$WORKDIR"
 
                                     repo init -u '$manifestUrl' -b '$branch'
-                                    repo sync -c --force-sync -j"$(nproc)"
+                                    repo sync -c --force-sync -j"${'$'}(nproc)"
                                     source build/envsetup.sh
                                     lunch '$lunchTarget'
                                     mka '$buildTarget'
