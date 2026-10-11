@@ -1,8 +1,6 @@
 package com.tahmidgaming.lineagearchive
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +29,7 @@ fun ToolsScreen(
     loading: Boolean,
     error: String?,
     onRefresh: () -> Unit,
+    onOpenGsi: () -> Unit,
     onOpenHarmonyBuild: () -> Unit,
     onDownloadAddon: (AddonDownload) -> Unit
 ) {
@@ -38,22 +37,6 @@ fun ToolsScreen(
     var pendingDd by remember { mutableStateOf<Pair<DownloadStore.Item, String>?>(null) }
     val verified = downloads.filter { it.verified == true && it.status.startsWith("Downloaded") }
     val uriHandler = LocalUriHandler.current
-    var gsiArch by remember { mutableStateOf(GsiCompatibilityDetector.defaultArchitecture()) }
-    var gsiSearch by remember { mutableStateOf("") }
-    var compatibility by remember { mutableStateOf<GsiCompatibilityInfo?>(null) }
-    LaunchedEffect(Unit) { compatibility = GsiCompatibilityDetector.detect() }
-    val filteredGsis = gsis.filter { item ->
-        val name = item.name.lowercase()
-        val matchesArch = when (gsiArch) {
-            "arm64" -> name.contains("arm64") || name.contains("aarch64") || name.contains("a64")
-            "arm" -> (name.contains("arm") || name.contains("a32")) && !name.contains("arm64")
-            "x86_64" -> name.contains("x86_64") || name.contains("x64")
-            "x86" -> (name.contains("x86") || name.contains("i686")) && !name.contains("x86_64")
-            else -> true
-        }
-        matchesArch && (gsiSearch.isBlank() || name.contains(gsiSearch.trim().lowercase()))
-    }
-
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
         item {
             ToolsCard {
@@ -143,37 +126,15 @@ fun ToolsScreen(
 
         item {
             ToolsCard {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Live GSI discovery", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = onRefresh) { Icon(Icons.Default.Download, "Refresh GSI releases") }
-                }
-                Text("Community Generic System Image releases from public GitHub projects. Discovery is not a compatibility guarantee.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-                compatibility?.let { info ->
-                    Text("Detected ABI: " + info.primaryAbi + " • Android API " + info.sdk, fontWeight = FontWeight.SemiBold)
-                    Text("Treble: " + info.trebleStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("A/B: " + info.partitionStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Dynamic partitions: " + info.dynamicPartitions.ifBlank { "unknown — confirm manually" }, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(Modifier.height(8.dp))
-                Text("These properties are hints, not a compatibility verdict. Confirm the exact Android version, vendor interface, partition layout, and project instructions before downloading or flashing. A GSI can fail to boot or erase data.", color = MaterialTheme.colorScheme.error)
+                Text("GSI Discovery", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Text("Browse community GSI release assets, filter by CPU architecture, and review non-root Treble/partition hints before downloading.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(10.dp))
-                OutlinedTextField(value = gsiSearch, onValueChange = { gsiSearch = it }, label = { Text("Filter GSI assets") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(6.dp))
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("All", "arm64", "arm", "x86_64", "x86").forEach { arch ->
-                        FilterChip(selected = gsiArch == arch, onClick = { gsiArch = arch }, label = { Text(arch) })
-                    }
+                Button(onClick = onOpenGsi, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Search, null)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Open GSI Discovery")
                 }
-                Spacer(Modifier.height(6.dp))
-                if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (filteredGsis.isEmpty() && !loading) {
-                    Text("No matching GSI assets were returned. Refresh later or open the source repositories below.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                filteredGsis.take(20).forEach { AddonRow(it, onDownloadAddon) }
-                Spacer(Modifier.height(6.dp))
-                TextButton(onClick = { uriHandler.openUri("https://github.com/ponces/treble_build_los/releases") }) { Text("Open Treble build releases") }
-                TextButton(onClick = { uriHandler.openUri("https://github.com/AndyYan/lineage_build_unified/releases") }) { Text("Open unified LineageOS releases") }
             }
         }
 
