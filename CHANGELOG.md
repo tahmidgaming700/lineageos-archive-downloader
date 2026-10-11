@@ -7,7 +7,10 @@ This file distinguishes confirmed repository history from planned work. An entry
 ### Implemented in the development branch
 - Added live GSI release discovery from community Treble/LineageOS GitHub sources, with clear compatibility warnings and source links.
 - Added a configurable Harmony Recovery release tracker using real GitHub release assets; it does not fabricate or build recovery images.
-- Added APK update checks that require a source SHA-256, matching package ID, and matching signing-certificate fingerprint before opening the Android installer.
+- Added APK update checks that require a source SHA-256, matching package ID, matching signing-certificate fingerprint, and a newer version before opening the Android installer.
+- Added a Harmony Recovery Build Lab that generates a user-configured Linux build script; it does not fabricate an image on the phone.
+- Added architecture filters for ARM64, ARM, x86_64, and x86 GSI assets, plus explicit boot/system DD Flasher targets.
+- Added native changelog, diagnostics with copyable privacy-conscious reports, and a Support Development screen.
 - Added unit tests for numeric version comparison and update detection.
 - Fixed duplicate worker declaration and invalid Kotlin escape sequence that blocked compilation.
 - Changed release automation to require production signing secrets and verify the release certificate before publishing.
@@ -17,6 +20,7 @@ This file distinguishes confirmed repository history from planned work. An entry
 - CI must pass on the latest commit, including the unit tests.
 - Confirm signing compatibility with the actual installed app and test upgrades on devices.
 - Validate GSI compatibility and recovery/DD flashing behaviour on supported hardware.
+- Validate generated Harmony Recovery build commands against each supported source tree and real Linux build hosts.
 - Configure the release signing secrets and verify the production release workflow.
 - Configure a verified funding link if financial support is to be offered.
 
