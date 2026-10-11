@@ -96,7 +96,7 @@ jobs:
             echo "::error::Release APK signer does not match ANDROID_CERT_SHA256. Refusing publication."
             exit 1
           fi
-          sha256sum "$APK" | tee app-release.sha256
+          sha256sum "$APK" | awk '{print $1"  app-release.apk"}' | tee app-release.sha256
 
       - name: Publish release
         if: steps.existing.outputs.exists != 'true'
