@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalUriHandler
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,6 +25,7 @@ fun ToolsScreen(
     downloads: List<DownloadStore.Item>,
     gapps: List<AddonDownload>,
     magisk: List<AddonDownload>,
+    gsis: List<AddonDownload>,
     loading: Boolean,
     error: String?,
     onRefresh: () -> Unit,
@@ -31,6 +34,7 @@ fun ToolsScreen(
     var pendingRecovery by remember { mutableStateOf<Pair<DownloadStore.Item, FlashManager.Recovery>?>(null) }
     var pendingDd by remember { mutableStateOf<Pair<DownloadStore.Item, String>?>(null) }
     val verified = downloads.filter { it.verified == true && it.status.startsWith("Downloaded") }
+    val uriHandler = LocalUriHandler.current
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
         item {
@@ -98,6 +102,71 @@ fun ToolsScreen(
                         Spacer(Modifier.height(10.dp))
                     }
                 }
+            }
+        }
+
+        item {
+            ToolsCard {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Live GSI discovery", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onRefresh) { Icon(Icons.Default.Download, "Refresh GSI releases") }
+                }
+                Text("Community Generic System Image releases from public GitHub projects. These are discovery results, not a compatibility guarantee.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                Text("Before downloading, confirm Android version, CPU architecture, A/B layout, dynamic partitions, and your device's Treble support. A GSI can fail to boot or erase data if installed incorrectly.", color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(10.dp))
+                if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (gsis.isEmpty() && !loading) {
+                    Text("No GSI release assets were returned. Refresh later or open the source repositories below.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                gsis.take(20).forEach { AddonRow(it, onDownloadAddon) }
+                Spacer(Modifier.height(6.dp))
+                TextButton(onClick = { uriHandler.openUri("https://github.com/ponces/treble_build_los/releases") }) { Text("Open Treble build releases") }
+                TextButton(onClick = { uriHandler.openUri("https://github.com/AndyYan/lineage_build_unified/releases") }) { Text("Open unified LineageOS releases") }
+            }
+        }
+
+        item {
+            ToolsCard {
+                Text("Harmony Recovery release tracker", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Text("Track releases from the project's real GitHub repository instead of guessing a download URL. Enter its owner/repository below; only assets returned by GitHub are shown.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(10.dp))
+                var recoveryRepo by remember { mutableStateOf("") }
+                var recoveryAssets by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
+                var recoveryLoading by remember { mutableStateOf(false) }
+                var recoveryError by remember { mutableStateOf<String?>(null) }
+                val scope = rememberCoroutineScope()
+                OutlinedTextField(
+                    value = recoveryRepo,
+                    onValueChange = { recoveryRepo = it },
+                    label = { Text("GitHub owner/repository") },
+                    placeholder = { Text("owner/Harmony-Recovery") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        val parts = recoveryRepo.trim().trim('/').split('/')
+                        if (parts.size != 2 || parts.any { it.isBlank() || !it.matches(Regex("[A-Za-z0-9_.-]+")) }) {
+                            recoveryError = "Enter a valid owner/repository path."
+                        } else {
+                            scope.launch {
+                                recoveryLoading = true
+                                recoveryError = null
+                                recoveryAssets = runCatching { AddonRepository.recoveryReleaseAssets(parts[0], parts[1]) }
+                                    .onFailure { recoveryError = it.message ?: "Unable to load recovery releases." }
+                                    .getOrDefault(emptyList())
+                                recoveryLoading = false
+                            }
+                        }
+                    },
+                    enabled = !recoveryLoading,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (recoveryLoading) "Checking releases…" else "Check Harmony Recovery releases") }
+                recoveryError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                recoveryAssets.forEach { AddonRow(it, onDownloadAddon) }
             }
         }
 
