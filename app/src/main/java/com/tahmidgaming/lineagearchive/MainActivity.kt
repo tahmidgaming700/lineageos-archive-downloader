@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -588,11 +589,13 @@ private fun DownloadHistoryCard(item: DownloadStore.Item, flashCapability: Flash
 
 @Composable
 private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
+    val uriHandler = LocalUriHandler.current
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 30.dp)) {
         item { Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("One UI-inspired controls with Liquid Glass surfaces", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { GlassCard { SettingRow(Icons.Default.Settings, "Appearance", "Choose how the downloader looks"); Spacer(Modifier.height(14.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) { ThemeChoice("System", ThemeMode.SYSTEM, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Light", ThemeMode.LIGHT, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Dark", ThemeMode.DARK, themeMode, onThemeModeChange, Modifier.weight(1f)) } } }
         item { GlassCard { SettingRow(Icons.Default.Shield, "Verification", "Downloads are checked with SHA-256 when the source provides a checksum."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Info, "Safety", "Downloaded packages are verified with SHA-256 when a checksum is supplied. If root and TWRP are detected, a verified ZIP can be handed to TWRP for installation.") } }
-        item { GlassCard { SettingRow(Icons.Default.Wifi, "Sources", "Official LineageOS builds and the clearly labeled TimSchumi archive."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Storage, "Compatibility", "Android 5.0+ with resumable downloads where the server supports HTTP Range requests."); Spacer(Modifier.height(16.dp)); Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { GlassCard { SettingRow(Icons.Default.Wifi, "Sources", "Official LineageOS builds and the clearly labeled TimSchumi archive."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Storage, "Compatibility", "Android 6.0+ (API 23) with resumable downloads where the server supports HTTP Range requests."); Spacer(Modifier.height(16.dp)); Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { GlassCard { SettingRow(Icons.Default.Info, "Support development", "Report bugs, suggest supported devices, or contribute code. No verified donation link is configured in this build."); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader/issues") }, modifier = Modifier.fillMaxWidth()) { Text("Report an issue") }; TextButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader") }, modifier = Modifier.fillMaxWidth()) { Text("Open project on GitHub") } } }
     }
 }
 
