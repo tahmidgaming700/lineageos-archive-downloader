@@ -6,12 +6,24 @@ A native Android utility for discovering LineageOS builds, browsing historical a
 
 ## Project status
 
-- Development branch: `release/2.0.0-completion`
+- Integrated branch: `main` (2.0.0 development build; public release is still blocked by missing signing secrets)
 - Application ID: `com.tahmidgaming.lineageupdater`
 - Development version: `2.0.0` (version code `2000`)
 - Current Android minimum SDK: API 23 (Android 6.0). Android 5.0/5.0.2 is **not supported** by this build.
 - Release status: **not published**
 - Release signing: the release variant now requires an injected production keystore. CI refuses publication unless the configured certificate fingerprint matches `ANDROID_CERT_SHA256`. Those secrets have not been confirmed/configured here, and no production release has been published.
+
+## Publishing a production release
+
+The release workflow intentionally refuses to publish an unsigned or incorrectly signed APK. The first attempt after merging 2.0.0 stopped because the repository secret `ANDROID_KEYSTORE_BASE64` is missing. Configure all of these under **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
+
+- `ANDROID_KEYSTORE_BASE64`: base64-encoded production keystore file.
+- `ANDROID_KEYSTORE_PASSWORD`: keystore password.
+- `ANDROID_KEY_ALIAS`: signing key alias.
+- `ANDROID_KEY_PASSWORD`: key password.
+- `ANDROID_CERT_SHA256`: SHA-256 certificate fingerprint expected from that key.
+
+Do not commit a keystore, password, private signing key, or access token to the repository. The fingerprint must be from the exact key used to sign the APK. Once all five secrets are configured, open [the failed Publish Release workflow](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions/runs/38142572425) and use **Re-run failed jobs**. The workflow will build the release APK, verify the certificate, and publish `app-updater.apk` plus its SHA-256 sidecar only if every gate passes.
 
 ## Existing functionality
 
