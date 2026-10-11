@@ -1,6 +1,8 @@
 package com.tahmidgaming.lineagearchive
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,12 +31,26 @@ fun ToolsScreen(
     loading: Boolean,
     error: String?,
     onRefresh: () -> Unit,
+    onOpenHarmonyBuild: () -> Unit,
     onDownloadAddon: (AddonDownload) -> Unit
 ) {
     var pendingRecovery by remember { mutableStateOf<Pair<DownloadStore.Item, FlashManager.Recovery>?>(null) }
     var pendingDd by remember { mutableStateOf<Pair<DownloadStore.Item, String>?>(null) }
     val verified = downloads.filter { it.verified == true && it.status.startsWith("Downloaded") }
     val uriHandler = LocalUriHandler.current
+    var gsiArch by remember { mutableStateOf("All") }
+    var gsiSearch by remember { mutableStateOf("") }
+    val filteredGsis = gsis.filter { item ->
+        val name = item.name.lowercase()
+        val matchesArch = when (gsiArch) {
+            "arm64" -> name.contains("arm64") || name.contains("aarch64") || name.contains("a64")
+            "arm" -> (name.contains("arm") || name.contains("a32")) && !name.contains("arm64")
+            "x86_64" -> name.contains("x86_64") || name.contains("x64")
+            "x86" -> (name.contains("x86") || name.contains("i686")) && !name.contains("x86_64")
+            else -> true
+        }
+        matchesArch && (gsiSearch.isBlank() || name.contains(gsiSearch.trim().lowercase()))
+    }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
         item {
@@ -83,6 +99,20 @@ fun ToolsScreen(
 
         item {
             ToolsCard {
+                Text("Harmony Recovery image build", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Text("Prepare a reproducible Linux build script from a trusted manifest, branch, device codename, and the source tree's exact build target. The phone does not fabricate a recovery image.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = onOpenHarmonyBuild, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Build, null)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Open Harmony Recovery Build Lab")
+                }
+            }
+        }
+
+        item {
+            ToolsCard {
                 Text("dd image flasher", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 Text("Root-only raw image flashing to an explicitly selected by-name partition. This can permanently brick a device if the image or target is wrong.", color = MaterialTheme.colorScheme.error)
@@ -94,11 +124,15 @@ fun ToolsScreen(
                     images.take(8).forEach { item ->
                         Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2)
                         Spacer(Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                            listOf("boot", "recovery", "vendor_boot", "dtbo").forEach { target ->
-                                FlashButton(target, capability.rooted) { pendingDd = item to target }
+                        listOf("boot", "boot_a", "boot_b", "system", "system_a", "system_b", "recovery", "vendor_boot", "dtbo")
+                            .chunked(3).forEach { targets ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                    targets.forEach { target ->
+                                        FlashButton(target, capability.rooted) { pendingDd = item to target }
+                                    }
+                                }
+                                Spacer(Modifier.height(5.dp))
                             }
-                        }
                         Spacer(Modifier.height(10.dp))
                     }
                 }
@@ -111,15 +145,23 @@ fun ToolsScreen(
                     Text("Live GSI discovery", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     IconButton(onClick = onRefresh) { Icon(Icons.Default.Download, "Refresh GSI releases") }
                 }
-                Text("Community Generic System Image releases from public GitHub projects. These are discovery results, not a compatibility guarantee.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Community Generic System Image releases from public GitHub projects. Discovery is not a compatibility guarantee.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 Text("Before downloading, confirm Android version, CPU architecture, A/B layout, dynamic partitions, and your device's Treble support. A GSI can fail to boot or erase data if installed incorrectly.", color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(10.dp))
-                if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (gsis.isEmpty() && !loading) {
-                    Text("No GSI release assets were returned. Refresh later or open the source repositories below.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(value = gsiSearch, onValueChange = { gsiSearch = it }, label = { Text("Filter GSI assets") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("All", "arm64", "arm", "x86_64", "x86").forEach { arch ->
+                        FilterChip(selected = gsiArch == arch, onClick = { gsiArch = arch }, label = { Text(arch) })
+                    }
                 }
-                gsis.take(20).forEach { AddonRow(it, onDownloadAddon) }
+                Spacer(Modifier.height(6.dp))
+                if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (filteredGsis.isEmpty() && !loading) {
+                    Text("No matching GSI assets were returned. Refresh later or open the source repositories below.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                filteredGsis.take(20).forEach { AddonRow(it, onDownloadAddon) }
                 Spacer(Modifier.height(6.dp))
                 TextButton(onClick = { uriHandler.openUri("https://github.com/ponces/treble_build_los/releases") }) { Text("Open Treble build releases") }
                 TextButton(onClick = { uriHandler.openUri("https://github.com/AndyYan/lineage_build_unified/releases") }) { Text("Open unified LineageOS releases") }
@@ -128,9 +170,9 @@ fun ToolsScreen(
 
         item {
             ToolsCard {
-                Text("Harmony Recovery release tracker", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Recovery release tracker", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
-                Text("Track releases from the project's real GitHub repository instead of guessing a download URL. Enter its owner/repository below; only assets returned by GitHub are shown.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Track Harmony Recovery, TWRP, OrangeFox, or another recovery project using its real GitHub owner/repository. Only assets returned by GitHub are shown; this tracker does not certify device compatibility.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(10.dp))
                 var recoveryRepo by remember { mutableStateOf(context.getSharedPreferences("tools", 0).getString("harmony_repo", "") ?: "") }
                 var recoveryAssets by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
