@@ -52,13 +52,51 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Configure production signing
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_CERT_SHA256: ${{ secrets.ANDROID_CERT_SHA256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD ANDROID_CERT_SHA256; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required repository secret $name is missing. No release will be published."
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release-signing.jks"
+          test -s "$RUNNER_TEMP/release-signing.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release-signing.jks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
+          echo "EXPECTED_CERT_SHA256=$ANDROID_CERT_SHA256" >> "$GITHUB_ENV"
+
       - name: Build release APK
         if: steps.existing.outputs.exists != 'true'
         run: gradle :app:assembleRelease --stacktrace --no-daemon
 
-      - name: Verify release APK
+      - name: Verify release APK and signer
         if: steps.existing.outputs.exists != 'true'
-        run: test -s app/build/outputs/apk/release/app-release.apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          ACTUAL_CERT="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ' :\r\n' | tr '[:upper:]' '[:lower:]')"
+          EXPECTED_CERT="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr -d ' :\r\n' | tr '[:upper:]' '[:lower:]')"
+          if [ -z "$ACTUAL_CERT" ] || [ "$ACTUAL_CERT" != "$EXPECTED_CERT" ]; then
+            echo "::error::Release APK signer does not match ANDROID_CERT_SHA256. Refusing publication."
+            exit 1
+          fi
+          sha256sum "$APK" | tee app-release.sha256
 
       - name: Publish release
         if: steps.existing.outputs.exists != 'true'
