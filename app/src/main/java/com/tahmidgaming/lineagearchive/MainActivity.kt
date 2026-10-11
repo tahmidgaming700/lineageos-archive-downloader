@@ -135,8 +135,11 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     }
 
     LaunchedEffect(Unit) {
+        val notificationPrefs = context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+            !notificationPrefs.getBoolean("notification_permission_asked", false)) {
+            notificationPrefs.edit().putBoolean("notification_permission_asked", true).apply()
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         flashCapability = withContext(Dispatchers.IO) { FlashManager.detect(context) }
