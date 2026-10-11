@@ -244,6 +244,9 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                     Screen.DOWNLOADS -> DownloadsScreen(context, downloads, flashCapability, flashMessage, { flashMessage = null }, { item ->
                         val result = FlashManager.flashVerifiedZip(context, item.filename, FlashManager.Recovery.TWRP)
                         flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to start TWRP installation."
+                    }, { item ->
+                        val result = AppUpdateInstaller.install(context, item)
+                        flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to verify or install this APK."
                     }, { screen = Screen.HOME }, { screen = Screen.SETTINGS })
                     Screen.UPDATES -> UpdateCenterScreen(context, selected, currentOsVersion, { file, device, version -> startDownload(file, device ?: "updates", version) }, updateRefresh) { updateRefresh++ }
                     Screen.TOOLS -> ToolsScreen(
@@ -401,6 +404,7 @@ private fun DownloadsScreen(
     flashMessage: String?,
     onDismissFlashMessage: () -> Unit,
     onFlash: (DownloadStore.Item) -> Unit,
+    onInstall: (DownloadStore.Item) -> Unit,
     onBack: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -531,7 +535,7 @@ private fun DownloadsScreen(
                     contentPadding = PaddingValues(bottom = 20.dp)
                 ) {
                     items(downloads.asReversed()) {
-                        DownloadHistoryCard(it, flashCapability, onFlash)
+                        DownloadHistoryCard(it, flashCapability, onFlash, onInstall)
                     }
                 }
             }
@@ -550,7 +554,37 @@ private fun EmuiUpdateRing(progress: Float?, centerTitle: String, centerSubtitle
 }
 
 @Composable
-private fun DownloadHistoryCard(item: DownloadStore.Item, flashCapability: FlashManager.Capability, onFlash: (DownloadStore.Item) -> Unit) { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) } }; if (flashCapability.ready && item.status.startsWith("Downloaded")) { Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = { onFlash(item) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flash with TWRP") } } } }
+private fun DownloadHistoryCard(item: DownloadStore.Item, flashCapability: FlashManager.Capability, onFlash: (DownloadStore.Item) -> Unit, onInstall: (DownloadStore.Item) -> Unit) {
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (item.verified == true && item.status.startsWith("Downloaded") && item.filename.endsWith(".apk", true)) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = { onInstall(item) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Default.SystemUpdate, null)
+                Spacer(Modifier.width(7.dp))
+                Text("Verify & install app update")
+            }
+            Spacer(Modifier.height(5.dp))
+            Text("Checks the source SHA-256, package ID, and signing certificate before opening Android's installer.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        }
+        if (flashCapability.ready && item.status.startsWith("Downloaded") && item.filename.endsWith(".zip", true)) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = { onFlash(item) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Default.Build, null)
+                Spacer(Modifier.width(7.dp))
+                Text("Flash with TWRP")
+            }
+        }
+    }
+}
 
 @Composable
 private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
