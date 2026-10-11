@@ -11,7 +11,7 @@
     <application
         android:name=".ArchiveApplication"
         android:allowBackup="true"
-        android:label="LineageOS Archive Downloader"
+        android:label="Lineage Updater & Downloader"
         android:supportsRtl="true"
         android:theme="@style/Theme.LineageArchive"
         android:icon="@mipmap/ic_launcher"
