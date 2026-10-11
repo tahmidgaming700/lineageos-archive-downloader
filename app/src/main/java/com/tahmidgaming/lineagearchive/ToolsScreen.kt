@@ -132,14 +132,14 @@ fun ToolsScreen(
                 Spacer(Modifier.height(6.dp))
                 Text("Track releases from the project's real GitHub repository instead of guessing a download URL. Enter its owner/repository below; only assets returned by GitHub are shown.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(10.dp))
-                var recoveryRepo by remember { mutableStateOf("") }
+                var recoveryRepo by remember { mutableStateOf(context.getSharedPreferences("tools", 0).getString("harmony_repo", "") ?: "") }
                 var recoveryAssets by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
                 var recoveryLoading by remember { mutableStateOf(false) }
                 var recoveryError by remember { mutableStateOf<String?>(null) }
                 val scope = rememberCoroutineScope()
                 OutlinedTextField(
                     value = recoveryRepo,
-                    onValueChange = { recoveryRepo = it },
+                    onValueChange = { recoveryRepo = it; context.getSharedPreferences("tools", 0).edit().putString("harmony_repo", it).apply() },
                     label = { Text("GitHub owner/repository") },
                     placeholder = { Text("owner/Harmony-Recovery") },
                     singleLine = true,
