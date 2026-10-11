@@ -110,6 +110,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             screen = Screen.DOWNLOADS
         }
     }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     fun startDownload(file: LineageFile, device: String, version: String?) {
         if (android.os.Build.VERSION.SDK_INT in 23..28 && context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -129,6 +130,10 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     }
 
     LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         flashCapability = withContext(Dispatchers.IO) { FlashManager.detect(context) }
         loading = true
         error = null
