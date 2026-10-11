@@ -35,6 +35,32 @@ object AddonRepository {
     suspend fun latestGithubRelease(owner: String, repo: String): GithubRelease =
         api.githubReleases(owner, repo, 1).first()
 
+    suspend fun recoveryReleaseAssets(owner: String, repo: String): List<AddonDownload> {
+        require(owner.matches(Regex("[A-Za-z0-9_.-]+")) && repo.matches(Regex("[A-Za-z0-9_.-]+"))) {
+            "Invalid GitHub repository"
+        }
+        return api.githubReleases(owner, repo, 5)
+            .flatMap { release ->
+                release.assets
+                    .filter { asset ->
+                        val name = asset.name.lowercase()
+                        listOf(".zip", ".img", ".img.xz", ".img.gz", ".bin", ".apk").any(name::endsWith)
+                    }
+                    .map { asset ->
+                        AddonDownload(
+                            asset.name,
+                            release.tag_name,
+                            asset.size,
+                            asset.digest?.removePrefix("sha256:"),
+                            asset.browser_download_url,
+                            "$owner/$repo"
+                        )
+                    }
+            }
+            .distinctBy { it.url }
+            .take(30)
+    }
+
     suspend fun magisk(): List<AddonDownload> {
         return api.magiskReleases()
             .flatMap { release ->
