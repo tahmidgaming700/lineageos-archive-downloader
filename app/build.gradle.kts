@@ -18,13 +18,24 @@ android {
         versionName = "2.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            // Values are injected by a trusted CI environment, never committed.
+            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TEMPORARY: preserves the existing CI build behaviour only.
-            // A public production release must use the same private signing
-            // identity as the installed app; do not publish this build as an
-            // in-place upgrade until signature compatibility is confirmed.
-            signingConfig = signingConfigs.getByName("debug")
+            // Intentionally requires a production keystore. Never silently sign
+            // a public release with a temporary runner's debug certificate.
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
     }
