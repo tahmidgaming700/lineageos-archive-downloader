@@ -1,6 +1,7 @@
 package com.tahmidgaming.lineagearchive
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
@@ -54,6 +55,7 @@ object LineageRepository {
         runCatching {
             deviceApi.devices().also { saveCache("devices", json.encodeToString(serializer, it)) }
         }.getOrElse { failure ->
+            if (failure is CancellationException) throw failure
             cachedJson("devices")?.let { json.decodeFromString(serializer, it) } ?: throw failure
         }
     }
@@ -64,6 +66,7 @@ object LineageRepository {
         runCatching {
             buildApi.builds(device).also { saveCache(key, json.encodeToString(serializer, it)) }
         }.getOrElse { failure ->
+            if (failure is CancellationException) throw failure
             cachedJson(key)?.let { json.decodeFromString(serializer, it) } ?: throw failure
         }
     }
@@ -73,6 +76,7 @@ object LineageRepository {
         val all = runCatching {
             archiveApi.builds().also { saveCache("archive_summaries", json.encodeToString(serializer, it)) }
         }.getOrElse { failure ->
+            if (failure is CancellationException) throw failure
             cachedJson("archive_summaries")?.let { json.decodeFromString(serializer, it) } ?: throw failure
         }
         all.filter { it.device.equals(device, ignoreCase = true) }
@@ -85,6 +89,7 @@ object LineageRepository {
                 saveCache(key, json.encodeToString(ArchiveBuildDetail.serializer(), it))
             }
         }.getOrElse { failure ->
+            if (failure is CancellationException) throw failure
             cachedJson(key)?.let { json.decodeFromString(ArchiveBuildDetail.serializer(), it) } ?: throw failure
         }
     }
