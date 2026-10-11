@@ -9,6 +9,8 @@ This file distinguishes confirmed repository history from planned work. An entry
 - Added a configurable Harmony Recovery release tracker using real GitHub release assets; it does not fabricate or build recovery images.
 - Added APK update checks that require a source SHA-256, matching package ID, matching signing-certificate fingerprint, and a newer version before opening the Android installer.
 - Added a Harmony Recovery Build Lab that generates a user-configured Linux build script; it does not fabricate an image on the phone.
+- Added a daily connected-network app update check that notifies users when a newer release is available; installation remains user-confirmed and signature-checked.
+- Added local cache fallback for public LineageOS device/build metadata and archive metadata when the network request fails.
 - Added architecture filters for ARM64, ARM, x86_64, and x86 GSI assets, plus explicit boot/system DD Flasher targets.
 - Added native changelog, diagnostics with copyable privacy-conscious reports, and a Support Development screen.
 - Added unit tests for numeric version comparison and update detection.
