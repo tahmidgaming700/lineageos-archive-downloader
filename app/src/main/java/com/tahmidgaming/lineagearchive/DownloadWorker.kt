@@ -30,6 +30,15 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         val expected = inputData.getString(KEY_SHA256)?.trim()?.takeIf { it.isNotBlank() }
         val expectedSize = inputData.getLong(KEY_SIZE, -1L).takeIf { it >= 0 }
         if (DownloadStore.items(applicationContext).none { it.id == id }) return@withContext Result.failure()
+        val parsedUrl = runCatching { java.net.URI(url) }.getOrNull()
+        if (parsedUrl == null || parsedUrl.scheme?.lowercase() !in setOf("https", "http") || parsedUrl.host.isNullOrBlank()) {
+            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Invalid download URL: only valid HTTP(S) links are accepted") }
+            return@withContext Result.failure()
+        }
+        if (filename.isBlank() || filename == "." || filename == ".." || filename.any { it == '/' || it == '\\\\' || it.code < 32 }) {
+            DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Invalid download filename") }
+            return@withContext Result.failure()
+        }
 
         setForeground(createForegroundInfo(filename, 0))
         DownloadStore.update(applicationContext, id) { it.copy(status = "Downloading • 0%", error = null) }
@@ -67,6 +76,10 @@ class DownloadWorker(appContext: Context, params: WorkerParameters) : CoroutineW
                 return@withContext Result.retry()
             }
 
+            if (r.code == 206 && existing == 0L) {
+                DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = "Server returned a partial response without a resume request") }
+                return@withContext Result.failure()
+            }
             if (!r.isSuccessful && r.code != 206) {
                 val message = "HTTP ${r.code}" + if (r.code == 403) " • download server rejected the request" else ""
                 DownloadStore.update(applicationContext, id) { it.copy(status = "Failed", error = message) }
