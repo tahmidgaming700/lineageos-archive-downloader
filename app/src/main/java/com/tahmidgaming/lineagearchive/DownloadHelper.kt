@@ -6,6 +6,7 @@ import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
@@ -42,6 +43,6 @@ object DownloadHelper {
             .addTag(item.id)
             .build()
         DownloadStore.update(context, item.id) { it.copy(status = "Queued", error = null) }
-        WorkManager.getInstance(context).enqueue(request)
+        WorkManager.getInstance(context).enqueueUniqueWork("download-${item.id}", ExistingWorkPolicy.KEEP, request)
     }
 }
