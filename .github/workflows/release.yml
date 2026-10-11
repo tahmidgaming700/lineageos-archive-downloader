@@ -88,6 +88,7 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
+          cp "$APK" app-updater.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
           ACTUAL_CERT="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ' :\r\n' | tr '[:upper:]' '[:lower:]')"
@@ -96,7 +97,7 @@ jobs:
             echo "::error::Release APK signer does not match ANDROID_CERT_SHA256. Refusing publication."
             exit 1
           fi
-          sha256sum "$APK" | awk '{print $1"  app-release.apk"}' | tee app-release.sha256
+          sha256sum app-updater.apk | awk '{print $1"  app-updater.apk"}' | tee app-updater.sha256
 
       - name: Publish release
         if: steps.existing.outputs.exists != 'true'
@@ -104,7 +105,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "v$VERSION" app/build/outputs/apk/release/app-release.apk app-release.sha256 \
+          gh release create "v$VERSION" app-updater.apk app-updater.sha256 \
             --repo "$GITHUB_REPOSITORY" \
             --title "Lineage Updater & Downloader $VERSION" \
             --generate-notes

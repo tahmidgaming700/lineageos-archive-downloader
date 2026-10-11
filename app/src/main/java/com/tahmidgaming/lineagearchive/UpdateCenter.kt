@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -26,6 +27,7 @@ fun UpdateCenterScreen(
     refreshKey: Int,
     onRefresh: () -> Unit
 ) {
+    val uriHandler = LocalUriHandler.current
     var loading by remember(refreshKey) { mutableStateOf(true) }
     var items by remember(refreshKey) { mutableStateOf<List<UpdateItem>>(emptyList()) }
     var recovery by remember(refreshKey) { mutableStateOf(UpdateRepository.localRecovery(context)) }
@@ -52,6 +54,18 @@ fun UpdateCenterScreen(
         }
         item { RecoveryUpdateCard("TWRP", recovery.first, "Official Team Win releases are device-specific. Match the detected codename before flashing.") }
         item { RecoveryUpdateCard("OrangeFox", recovery.second, "OrangeFox releases are device-specific. Match the detected codename and variant before flashing.") }
+        item {
+            Card(shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.padding(18.dp)) {
+                    Text("Recovery release sources", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    Text("Recovery images are device-specific. These links lead to project release/device pages; the app does not claim that a release supports your device unless you verify its codename and variant.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(onClick = { uriHandler.openUri("https://twrp.me/Devices/") }, modifier = Modifier.fillMaxWidth()) { Text("Browse Team Win devices") }
+                    OutlinedButton(onClick = { uriHandler.openUri("https://orangefox.download/") }, modifier = Modifier.fillMaxWidth()) { Text("Browse OrangeFox releases") }
+                }
+            }
+        }
         item {
             Card(shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.padding(18.dp)) {

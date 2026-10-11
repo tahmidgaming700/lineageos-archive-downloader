@@ -92,7 +92,7 @@ object AddonRepository {
                                     name.endsWith(".img.xz") ||
                                     name.endsWith(".img.gz") ||
                                     name.endsWith(".zip")
-                                imageLike && Regex(".*(gsi|treble|arm64|a64|vndklite|lineage).*").matches(name)
+                                imageLike && Regex(".*(gsi|treble|arm|a64|aarch64|x86|i686|vndklite|lineage).*").matches(name)
                             }
                             .map { asset ->
                                 AddonDownload(

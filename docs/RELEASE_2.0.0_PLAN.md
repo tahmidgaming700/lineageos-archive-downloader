@@ -14,10 +14,12 @@ This document tracks the intended major release. A checklist item is not complet
 ## Core application
 
 - [ ] Audit existing ROM discovery and archive flows for regressions.
+- [ ] Validate the GSI architecture filters and generated Harmony Recovery build scripts against real source repositories.
 - [ ] Verify current-build metadata and source attribution.
 - [ ] Verify download cancellation/resume, duplicate prevention, and error handling.
 - [ ] Verify checksum behaviour when the expected digest is missing or malformed.
-- [ ] Verify offline/stale cache behaviour and last-sync timestamp.
+- [x] Add offline fallback for public LineageOS device/build and archive metadata, with cache freshness surfaced in diagnostics.
+- [ ] Exercise offline/stale cache behaviour and last-sync timestamp on physical devices.
 - [ ] Exercise light/dark theme and navigation on supported Android versions.
 
 ## Planned feature areas
@@ -25,8 +27,9 @@ This document tracks the intended major release. A checklist item is not complet
 - [x] Community GSI release discovery and source links; device-specific compatibility remains a manual check and must not be implied by discovery.
 - [x] Configurable GitHub recovery release tracker; official/community status is determined by the configured source, not guessed.
 - [x] Root-only DD Flasher controls with an explicit destructive-action confirmation; device/partition validation still requires physical-device testing.
-- [x] Harmony Recovery release tracking through a user-configured GitHub repository. A recovery image build pipeline remains out of scope until a real source/build environment is confirmed.
-- [x] APK self-update checks require a SHA-256 digest, matching package ID, and matching signing certificate before invoking Android's installer.
+- [x] Harmony Recovery release tracking through a user-configured GitHub repository and a build-script planner for a real Linux host. The app does not build or fabricate recovery images on-device; generated commands still require validation against the chosen source tree.
+- [x] APK self-update checks require a SHA-256 digest, matching package ID, matching signing certificate, and newer version before invoking Android's installer.
+- [x] Schedule a daily connected-network app update check with user-visible notifications; installation remains user-confirmed.
 - [x] Support-development page links to the project and issue tracker; no financial link is shown until a real destination is verified.
 
 ## Release automation

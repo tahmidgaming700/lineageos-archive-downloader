@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, TOOLS, UPDATES, SETTINGS }
+private enum class Screen { HOME, DEVICES, BUILDS, ARCHIVE, DOWNLOADS, TOOLS, GSI, UPDATES, SETTINGS, CHANGELOG, DIAGNOSTICS, SUPPORT, HARMONY_BUILD }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,6 +110,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             screen = Screen.DOWNLOADS
         }
     }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     fun startDownload(file: LineageFile, device: String, version: String?) {
         if (android.os.Build.VERSION.SDK_INT in 23..28 && context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -124,11 +125,23 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     suspend fun refreshForDevice(device: LineageDevice?) {
         if (device == null) return
         runCatching { LineageRepository.builds(device.model) }
-            .onSuccess { builds = it.sortedByDescending(LineageBuild::datetime) }
+            .onSuccess {
+                builds = it.sortedByDescending(LineageBuild::datetime)
+                if (LineageRepository.isUsingCachedFallback(LineageRepository.buildsCacheKey(device.model))) {
+                    error = "Offline mode: showing cached builds for " + device.name + ". Check Diagnostics for the last metadata cache time."
+                }
+            }
             .onFailure { error = it.message ?: "Unable to check for builds" }
     }
 
     LaunchedEffect(Unit) {
+        val notificationPrefs = context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+            !notificationPrefs.getBoolean("notification_permission_asked", false)) {
+            notificationPrefs.edit().putBoolean("notification_permission_asked", true).apply()
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         flashCapability = withContext(Dispatchers.IO) { FlashManager.detect(context) }
         loading = true
         error = null
@@ -136,6 +149,9 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             .onSuccess { list ->
                 devices = list
                 selected = DeviceDetector.match(detected, list)
+                if (LineageRepository.isUsingCachedFallback("devices")) {
+                    error = "Offline mode: showing cached device metadata. Check Diagnostics for the last cache update."
+                }
                 refreshForDevice(selected)
             }
             .onFailure { error = it.message ?: "Unable to connect to LineageOS" }
@@ -144,12 +160,14 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     }
 
     LaunchedEffect(screen, toolsRefresh) {
-        if (screen == Screen.TOOLS) {
+        if (screen == Screen.TOOLS || screen == Screen.GSI) {
             toolsLoading = true
             toolsError = null
             runCatching {
-                gapps = AddonRepository.gapps()
-                magisk = AddonRepository.magisk()
+                if (screen == Screen.TOOLS) {
+                    gapps = AddonRepository.gapps()
+                    magisk = AddonRepository.magisk()
+                }
                 gsis = AddonRepository.gsi()
             }.onFailure { toolsError = it.message ?: "Unable to load addon downloads" }
             toolsLoading = false
@@ -164,7 +182,13 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
         loading = true
         error = null
         runCatching { LineageRepository.devices() }
-            .onSuccess { devices = it; screen = Screen.DEVICES }
+            .onSuccess {
+                devices = it
+                screen = Screen.DEVICES
+                if (LineageRepository.isUsingCachedFallback("devices")) {
+                    error = "Offline mode: showing cached device metadata. Check Diagnostics for the last cache update."
+                }
+            }
             .onFailure { error = it.message ?: "Unable to load devices" }
         loading = false
     }
@@ -187,7 +211,12 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             loading = true
             error = null
             runCatching { LineageRepository.archiveBuilds(device.model) }
-                .onSuccess { archiveBuilds = it.sortedByDescending { item -> item.id } }
+                .onSuccess {
+                    archiveBuilds = it.sortedByDescending { item -> item.id }
+                    if (LineageRepository.isUsingCachedFallback("archive_summaries")) {
+                        error = "Offline mode: showing cached archive metadata. Check Diagnostics for the last cache update."
+                    }
+                }
                 .onFailure { error = it.message ?: "Unable to load archive" }
             loading = false
         }
@@ -260,11 +289,20 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         loading = toolsLoading,
                         error = toolsError,
                         onRefresh = { toolsRefresh++ },
+                        onOpenGsi = { screen = Screen.GSI },
+                        onOpenHarmonyBuild = { screen = Screen.HARMONY_BUILD },
                         onDownloadAddon = { addon ->
                             startDownload(LineageFile(addon.name, addon.size, addon.sha256, addon.url), "addons", addon.version)
                         }
                     )
-                    Screen.SETTINGS -> SettingsContent(themeMode, onThemeModeChange)
+                    Screen.GSI -> GsiDiscoveryScreen(gsis, toolsLoading, toolsError, { toolsRefresh++ }) { addon ->
+                        startDownload(LineageFile(addon.name, addon.size, addon.sha256, addon.url), "gsi", addon.version)
+                    }
+                    Screen.SETTINGS -> SettingsContent(themeMode, onThemeModeChange, { screen = Screen.CHANGELOG }, { screen = Screen.DIAGNOSTICS }, { screen = Screen.SUPPORT })
+                    Screen.CHANGELOG -> ChangelogContent()
+                    Screen.DIAGNOSTICS -> DiagnosticsContent(context, detected, selected, flashCapability, downloads)
+                    Screen.SUPPORT -> SupportContent()
+                    Screen.HARMONY_BUILD -> HarmonyRecoveryBuildScreen(context)
                 }
             }
         }
@@ -320,9 +358,14 @@ private fun titleFor(screen: Screen) = when (screen) {
     Screen.ARCHIVE -> "Archive"
     Screen.DOWNLOADS -> "Software update"
     Screen.TOOLS -> "Flashing & tools"
+    Screen.GSI -> "GSI Discovery"
     Screen.UPDATES -> "Updates"
     Screen.SETTINGS -> "Settings"
-    Screen.HOME -> "LineageOS Downloader"
+    Screen.CHANGELOG -> "Changelog"
+    Screen.DIAGNOSTICS -> "Diagnostics"
+    Screen.SUPPORT -> "Support Development"
+    Screen.HARMONY_BUILD -> "Harmony Recovery Build Lab"
+    Screen.HOME -> "Lineage Updater & Downloader"
 }
 
 @Composable
@@ -588,14 +631,66 @@ private fun DownloadHistoryCard(item: DownloadStore.Item, flashCapability: Flash
 }
 
 @Composable
-private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
+private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit, onChangelog: () -> Unit, onDiagnostics: () -> Unit, onSupport: () -> Unit) {
     val uriHandler = LocalUriHandler.current
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 30.dp)) {
         item { Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("One UI-inspired controls with Liquid Glass surfaces", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { GlassCard { SettingRow(Icons.Default.Settings, "Appearance", "Choose how the downloader looks"); Spacer(Modifier.height(14.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) { ThemeChoice("System", ThemeMode.SYSTEM, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Light", ThemeMode.LIGHT, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Dark", ThemeMode.DARK, themeMode, onThemeModeChange, Modifier.weight(1f)) } } }
         item { GlassCard { SettingRow(Icons.Default.Shield, "Verification", "Downloads are checked with SHA-256 when the source provides a checksum."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Info, "Safety", "Downloaded packages are verified with SHA-256 when a checksum is supplied. If root and TWRP are detected, a verified ZIP can be handed to TWRP for installation.") } }
         item { GlassCard { SettingRow(Icons.Default.Wifi, "Sources", "Official LineageOS builds and the clearly labeled TimSchumi archive."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Storage, "Compatibility", "Android 6.0+ (API 23) with resumable downloads where the server supports HTTP Range requests."); Spacer(Modifier.height(16.dp)); Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
-        item { GlassCard { SettingRow(Icons.Default.Info, "Support development", "Report bugs, suggest supported devices, or contribute code. No verified donation link is configured in this build."); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader/issues") }, modifier = Modifier.fillMaxWidth()) { Text("Report an issue") }; TextButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader/blob/main/CHANGELOG.md") }, modifier = Modifier.fillMaxWidth()) { Text("Read the changelog") }; TextButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader") }, modifier = Modifier.fillMaxWidth()) { Text("Open project on GitHub") } } }
+        item { GlassCard { SettingRow(Icons.Default.Info, "Support development", "Report bugs, suggest supported devices, contribute code, and review verified funding options."); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = onSupport, modifier = Modifier.fillMaxWidth()) { Text("Open Support Development") }; TextButton(onClick = onChangelog, modifier = Modifier.fillMaxWidth()) { Text("Read the in-app changelog") }; TextButton(onClick = onDiagnostics, modifier = Modifier.fillMaxWidth()) { Text("Open diagnostics") }; TextButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader") }, modifier = Modifier.fillMaxWidth()) { Text("Open project on GitHub") } } }
+    }
+}
+
+@Composable
+private fun ChangelogContent() {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
+        item { GlassCard { Text("Version 2.0.0", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(4.dp)); Text("Development build — not yet a production release", color = MaterialTheme.colorScheme.error) } }
+        item { GlassCard { SettingRow(Icons.Default.SystemUpdate, "LineageOS tracking", "Live official device/build discovery plus a separately labelled historical archive."); Spacer(Modifier.height(12.dp)); SettingRow(Icons.Default.Download, "Downloads & integrity", "Background downloads, resume support, SHA-256 verification when a source digest is available, and explicit failure status.") } }
+        item { GlassCard { SettingRow(Icons.Default.Search, "GSI discovery", "Community GSI release assets with architecture filters and source links. Compatibility still needs device-specific checking."); Spacer(Modifier.height(12.dp)); SettingRow(Icons.Default.Build, "DD Flasher", "Root-only raw image writing to selected by-name partitions, including boot and system variants, with a destructive-action confirmation."); Spacer(Modifier.height(12.dp)); SettingRow(Icons.Default.Storage, "Harmony Recovery", "Build-script planning for a Linux host and configurable recovery release tracking. The phone does not fabricate recovery images.") } }
+        item { GlassCard { SettingRow(Icons.Default.Shield, "Secure app update", "Requires a trusted SHA-256, matching package ID, matching signer, and a newer version before opening Android's installer."); Spacer(Modifier.height(12.dp)); SettingRow(Icons.Default.Info, "Diagnostics & support", "Copy a privacy-conscious device/app report, open the issue tracker, and review the release safeguards.") } }
+        item { GlassCard { Text("Release status", fontWeight = FontWeight.Bold); Spacer(Modifier.height(5.dp)); Text("The development build and tests must pass CI. A public release additionally requires a production signing keystore and a certificate fingerprint confirmed against the installed app. No production APK is published by this changelog screen.") } }
+    }
+}
+
+@Composable
+private fun DiagnosticsContent(
+    context: android.content.Context,
+    detected: DeviceDetector.Info,
+    selected: LineageDevice?,
+    capability: FlashManager.Capability,
+    downloads: List<DownloadStore.Item>
+) {
+    val report = listOf(
+        "App version: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")",
+        "Package ID: " + context.packageName,
+        "Android: " + android.os.Build.VERSION.RELEASE + " / API " + android.os.Build.VERSION.SDK_INT,
+        "Device: " + detected.manufacturer + " " + detected.model,
+        "Device codename: " + detected.device,
+        "Product: " + detected.product,
+        "Selected LineageOS device: " + (selected?.name ?: "not selected"),
+        "Selected codename: " + (selected?.model ?: "not selected"),
+        "Root access detected: " + capability.rooted,
+        "TWRP detected: " + capability.twrpDetected,
+        "OrangeFox detected: " + capability.orangeFoxDetected,
+        "Tracked downloads: " + downloads.size,
+        "Active downloads: " + downloads.count { it.status == "Queued" || it.status == "Paused" || it.status.startsWith("Downloading") },
+        "Failed downloads: " + downloads.count { it.status.startsWith("Failed") || it.status.contains("FAILED") },
+        "Last public metadata cache update: " + (LineageRepository.lastCacheUpdated()?.let { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.US).format(Date(it)) } ?: "never")
+    ).joinToString("\n")
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
+        item { GlassCard { Text("Diagnostics", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(5.dp)); Text("This report intentionally excludes IMEI, serial number, account details, and file contents. Review it before sharing.", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { GlassCard { Text(report, style = MaterialTheme.typography.bodyMedium); Spacer(Modifier.height(12.dp)); Button(onClick = { val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager; clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Lineage Updater diagnostics", report)); android.widget.Toast.makeText(context, "Diagnostics copied", android.widget.Toast.LENGTH_SHORT).show() }, modifier = Modifier.fillMaxWidth()) { Text("Copy diagnostic summary") } } }
+    }
+}
+
+@Composable
+private fun SupportContent() {
+    val uriHandler = LocalUriHandler.current
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
+        item { GlassCard { Text("Support Development", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(6.dp)); Text("Help improve device coverage, report reproducible bugs, contribute code, and review release safeguards. Do not share private keys, serial numbers, or account tokens in public issues.") } }
+        item { GlassCard { SettingRow(Icons.Default.Info, "Report a bug", "Include Android version, app version, source URL, and a redacted diagnostic summary."); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader/issues") }, modifier = Modifier.fillMaxWidth()) { Text("Open issue tracker") }; TextButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader/pulls") }, modifier = Modifier.fillMaxWidth()) { Text("Contribute with a pull request") } } }
+        item { GlassCard { SettingRow(Icons.Default.Shield, "Funding", "No verified sponsor or donation destination is configured in this repository. This build intentionally shows no payment link; a real destination must be added and verified by the project owner first.") } }
     }
 }
 
