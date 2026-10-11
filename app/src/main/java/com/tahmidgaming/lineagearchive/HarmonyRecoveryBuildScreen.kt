@@ -39,6 +39,7 @@ fun HarmonyRecoveryBuildScreen(context: Context) {
     var buildTarget by remember { mutableStateOf("recoveryimage") }
     var script by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    val dollar = '$'
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -131,64 +132,12 @@ fun HarmonyRecoveryBuildScreen(context: Context) {
                                     # Harmony Recovery build plan for device: $codename
                                     # Run only on a Linux build host with the required toolchain and disk space.
                                     # Confirm the manifest, branch, device tree and build target with the project maintainers.
-                                    WORKDIR="${'$'}{HOME}/harmony-recovery-$codename"
-                                    mkdir -p "${'$'}WORKDIR"
-                                    cd "${'$'}WORKDIR"
+                                    WORKDIR="$dollar{HOME}/harmony-recovery-$codename"
+                                    mkdir -p "$dollarWORKDIR"
+                                    cd "$dollarWORKDIR"
 
                                     repo init -u '$manifestUrl' -b '$branch'
-                                    repo sync -c --force-sync -j"${'$'}(nproc)"
-                                    source build/envsetup.sh
-                                    lunch '$lunchTarget'
-                                    mka '$buildTarget'
-
-                                    echo "Build command finished. Locate the output using the source tree's documented output path."
-                                """.trimIndent()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Generate Linux build script") }
-                    error?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
-        }
-        if (script.isNotBlank()) {
-            item {
-                Card(shape = RoundedCornerShape(24.dp)) {
-                    Column(Modifier.padding(18.dp)) {
-                        Text("Generated script", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            script,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 30,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Harmony Recovery build script", script))
-                                Toast.makeText(context, "Build script copied", Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Copy build script") }
-                        TextButton(
-                            onClick = { script = "" },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Clear script") }
-                    }
-                }
-            }
-        }
-    }
-}
-}WORKDIR"
-
-                                    repo init -u '$manifestUrl' -b '$branch'
-                                    repo sync -c --force-sync -j"${'$'}(nproc)"
+                                    repo sync -c --force-sync -j"$dollar(nproc)"
                                     source build/envsetup.sh
                                     lunch '$lunchTarget'
                                     mka '$buildTarget'
