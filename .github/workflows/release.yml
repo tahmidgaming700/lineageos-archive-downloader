@@ -2,14 +2,14 @@ name: Publish Release
 
 on:
   push:
-    branches: [ "main" ]
+    tags: [ "v*" ]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-main
+  group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
