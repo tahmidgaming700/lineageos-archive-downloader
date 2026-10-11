@@ -125,6 +125,9 @@ fun HarmonyRecoveryBuildScreen(context: Context) {
                                 script = ""
                             } else {
                                 error = null
+                                val shellHome = dollar.toString() + "{HOME}"
+                                val shellWorkdir = dollar.toString() + "WORKDIR"
+                                val shellNproc = dollar.toString() + "(nproc)"
                                 script = """
                                     #!/usr/bin/env bash
                                     set -euo pipefail
@@ -132,12 +135,12 @@ fun HarmonyRecoveryBuildScreen(context: Context) {
                                     # Harmony Recovery build plan for device: $codename
                                     # Run only on a Linux build host with the required toolchain and disk space.
                                     # Confirm the manifest, branch, device tree and build target with the project maintainers.
-                                    WORKDIR="$dollar{HOME}/harmony-recovery-$codename"
-                                    mkdir -p "$dollarWORKDIR"
-                                    cd "$dollarWORKDIR"
+                                    WORKDIR="$shellHome/harmony-recovery-$codename"
+                                    mkdir -p "$shellWorkdir"
+                                    cd "$shellWorkdir"
 
                                     repo init -u '$manifestUrl' -b '$branch'
-                                    repo sync -c --force-sync -j"$dollar(nproc)"
+                                    repo sync -c --force-sync -j"$shellNproc"
                                     source build/envsetup.sh
                                     lunch '$lunchTarget'
                                     mka '$buildTarget'
