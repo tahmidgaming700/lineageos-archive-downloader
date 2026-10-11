@@ -38,8 +38,10 @@ fun ToolsScreen(
     var pendingDd by remember { mutableStateOf<Pair<DownloadStore.Item, String>?>(null) }
     val verified = downloads.filter { it.verified == true && it.status.startsWith("Downloaded") }
     val uriHandler = LocalUriHandler.current
-    var gsiArch by remember { mutableStateOf("All") }
+    var gsiArch by remember { mutableStateOf(GsiCompatibilityDetector.defaultArchitecture()) }
     var gsiSearch by remember { mutableStateOf("") }
+    var compatibility by remember { mutableStateOf<GsiCompatibilityInfo?>(null) }
+    LaunchedEffect(Unit) { compatibility = GsiCompatibilityDetector.detect() }
     val filteredGsis = gsis.filter { item ->
         val name = item.name.lowercase()
         val matchesArch = when (gsiArch) {
@@ -147,7 +149,14 @@ fun ToolsScreen(
                 }
                 Text("Community Generic System Image releases from public GitHub projects. Discovery is not a compatibility guarantee.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
-                Text("Before downloading, confirm Android version, CPU architecture, A/B layout, dynamic partitions, and your device's Treble support. A GSI can fail to boot or erase data if installed incorrectly.", color = MaterialTheme.colorScheme.error)
+                compatibility?.let { info ->
+                    Text("Detected ABI: " + info.primaryAbi + " • Android API " + info.sdk, fontWeight = FontWeight.SemiBold)
+                    Text("Treble: " + info.trebleStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("A/B: " + info.partitionStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Dynamic partitions: " + info.dynamicPartitions.ifBlank { "unknown — confirm manually" }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("These properties are hints, not a compatibility verdict. Confirm the exact Android version, vendor interface, partition layout, and project instructions before downloading or flashing. A GSI can fail to boot or erase data.", color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(value = gsiSearch, onValueChange = { gsiSearch = it }, label = { Text("Filter GSI assets") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(6.dp))
