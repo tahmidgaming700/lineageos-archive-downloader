@@ -50,6 +50,13 @@ object AppUpdateInstaller {
             signerFingerprints(installed) == signerFingerprints(candidate)) {
             "Signing certificate mismatch. Installation is blocked to protect the installed app."
         }
+        val isNewer = if (Build.VERSION.SDK_INT >= 28) {
+            candidate.longVersionCode > installed.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            candidate.versionCode > installed.versionCode
+        }
+        require(isNewer) { "This APK is not newer than the installed version." }
 
         if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
             val settings = Intent(
