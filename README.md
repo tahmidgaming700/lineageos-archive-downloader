@@ -22,6 +22,8 @@ The existing application includes these capabilities (check the current default 
 - Displays available build details including filename, size and published checksum when provided.
 - Downloads ROM ZIPs with background progress notifications.
 - Supports resume when the server supports HTTP range requests.
+- Caches public device/build/archive metadata locally and falls back to cached results when network requests fail.
+- Checks for app updates daily when connected and can notify the user; it does not silently install updates.
 - Calculates SHA-256 after download when a trusted expected digest is available.
 - Separates TimSchumi historical builds from official current releases.
 - Offers light, dark and system theme options.
