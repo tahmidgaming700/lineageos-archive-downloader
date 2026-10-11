@@ -646,7 +646,8 @@ private fun DiagnosticsContent(
         "OrangeFox detected: " + capability.orangeFoxDetected,
         "Tracked downloads: " + downloads.size,
         "Active downloads: " + downloads.count { it.status == "Queued" || it.status == "Paused" || it.status.startsWith("Downloading") },
-        "Failed downloads: " + downloads.count { it.status.startsWith("Failed") || it.status.contains("FAILED") }
+        "Failed downloads: " + downloads.count { it.status.startsWith("Failed") || it.status.contains("FAILED") },
+        "Last public metadata cache update: " + (LineageRepository.lastCacheUpdated()?.let { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.US).format(Date(it)) } ?: "never")
     ).joinToString("\n")
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
         item { GlassCard { Text("Diagnostics", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(5.dp)); Text("This report intentionally excludes IMEI, serial number, account details, and file contents. Review it before sharing.", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
