@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 fun GsiDiscoveryScreen(
     gsis: List<AddonDownload>,
     loading: Boolean,
+    error: String?,
     onRefresh: () -> Unit,
     onDownload: (AddonDownload) -> Unit
 ) {
@@ -108,6 +109,7 @@ fun GsiDiscoveryScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (filtered.isEmpty() && !loading) {
                         Text("No matching GSI assets were returned. Refresh later or open the source repositories below.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
