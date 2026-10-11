@@ -52,7 +52,7 @@ object UpdateRepository {
                     "$APP_OWNER/$APP_REPO"
                 )
             },
-            description = "LineageOS Archive Downloader",
+            description = "Lineage Updater & Downloader",
             canDownload = asset != null
         )
     }
