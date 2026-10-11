@@ -133,7 +133,7 @@ fun HarmonyRecoveryBuildScreen(context: Context) {
                                     # Confirm the manifest, branch, device tree and build target with the project maintainers.
                                     WORKDIR="${'$'}{HOME}/harmony-recovery-$codename"
                                     mkdir -p "${'$'}WORKDIR"
-                                    cd "${'
+                                    cd "${'$'}WORKDIR"
 
                                     repo init -u '$manifestUrl' -b '$branch'
                                     repo sync -c --force-sync -j"${'$'}(nproc)"
