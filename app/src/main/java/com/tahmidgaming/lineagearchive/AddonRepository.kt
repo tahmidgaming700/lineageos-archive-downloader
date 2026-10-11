@@ -35,6 +35,32 @@ object AddonRepository {
     suspend fun latestGithubRelease(owner: String, repo: String): GithubRelease =
         api.githubReleases(owner, repo, 1).first()
 
+    suspend fun recoveryReleaseAssets(owner: String, repo: String): List<AddonDownload> {
+        require(owner.matches(Regex("[A-Za-z0-9_.-]+")) && repo.matches(Regex("[A-Za-z0-9_.-]+"))) {
+            "Invalid GitHub repository"
+        }
+        return api.githubReleases(owner, repo, 5)
+            .flatMap { release ->
+                release.assets
+                    .filter { asset ->
+                        val name = asset.name.lowercase()
+                        listOf(".zip", ".img", ".img.xz", ".img.gz", ".bin", ".apk").any(name::endsWith)
+                    }
+                    .map { asset ->
+                        AddonDownload(
+                            asset.name,
+                            release.tag_name,
+                            asset.size,
+                            asset.digest?.removePrefix("sha256:"),
+                            asset.browser_download_url,
+                            "$owner/$repo"
+                        )
+                    }
+            }
+            .distinctBy { it.url }
+            .take(30)
+    }
+
     suspend fun magisk(): List<AddonDownload> {
         return api.magiskReleases()
             .flatMap { release ->
@@ -43,6 +69,46 @@ object AddonRepository {
                         AddonDownload(asset.name, release.tag_name, asset.size, asset.digest?.removePrefix("sha256:"), asset.browser_download_url, "topjohnwu/Magisk")
                     }
             }
+    }
+
+    /**
+     * Community GSI discovery. Results are live GitHub release assets from known
+     * Treble/GSI projects; availability does not imply compatibility with a device.
+     */
+    suspend fun gsi(): List<AddonDownload> = coroutineScope {
+        val sources = listOf(
+            "ponces" to "treble_build_los",
+            "AndyYan" to "lineage_build_unified"
+        )
+        sources.map { (owner, repo) ->
+            async {
+                runCatching { api.githubReleases(owner, repo, 5) }
+                    .getOrDefault(emptyList())
+                    .flatMap { release ->
+                        release.assets
+                            .filter { asset ->
+                                val name = asset.name.lowercase()
+                                val imageLike = name.endsWith(".img") ||
+                                    name.endsWith(".img.xz") ||
+                                    name.endsWith(".img.gz") ||
+                                    name.endsWith(".zip")
+                                imageLike && Regex(".*(gsi|treble|arm64|a64|vndklite|lineage).*").matches(name)
+                            }
+                            .map { asset ->
+                                AddonDownload(
+                                    asset.name,
+                                    release.tag_name,
+                                    asset.size,
+                                    asset.digest?.removePrefix("sha256:"),
+                                    asset.browser_download_url,
+                                    "$owner/$repo"
+                                )
+                            }
+                    }
+            }
+        }.awaitAll().flatten().distinctBy { it.url }
+            .sortedByDescending { it.version }
+            .take(40)
     }
 
     suspend fun gapps(): List<AddonDownload> = coroutineScope {

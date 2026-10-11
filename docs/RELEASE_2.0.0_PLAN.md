@@ -22,17 +22,16 @@ This document tracks the intended major release. A checklist item is not complet
 
 ## Planned feature areas
 
-- [ ] GSI discovery with explainable, device-specific compatibility status.
-- [ ] Recovery release tracking with official/community labels.
-- [ ] DD Flasher: supported workflows only, explicit destructive-action confirmation.
-- [ ] Harmony Recovery: configuration/build orchestration only where a real Linux build environment is available; never fabricate an image.
-- [ ] Secure app update manifest and package-signature checks.
-- [ ] Support Development page with real links only after eligibility and URLs are verified.
+- [x] Community GSI release discovery and source links; device-specific compatibility remains a manual check and must not be implied by discovery.
+- [x] Configurable GitHub recovery release tracker; official/community status is determined by the configured source, not guessed.
+- [x] Root-only DD Flasher controls with an explicit destructive-action confirmation; device/partition validation still requires physical-device testing.
+- [x] Harmony Recovery release tracking through a user-configured GitHub repository. A recovery image build pipeline remains out of scope until a real source/build environment is confirmed.
+- [x] APK self-update checks require a SHA-256 digest, matching package ID, and matching signing certificate before invoking Android's installer.
+- [x] Support-development page links to the project and issue tracker; no financial link is shown until a real destination is verified.
 
 ## Release automation
 
-- [ ] CI build succeeds on the proposed commit.
-- [ ] Unit tests and static checks succeed.
+- [ ] CI build and unit tests succeed on the latest proposed commit.
 - [ ] APK exists and is non-empty.
 - [ ] APK package ID/version/version code are inspected.
 - [ ] APK signing certificate is compared with the intended update identity.
@@ -42,4 +41,4 @@ This document tracks the intended major release. A checklist item is not complet
 
 ## Current caveat
 
-The current build configuration uses the debug signing configuration for the release variant. This is not a safe basis for claiming in-place upgrade compatibility. Do not publish the resulting APK as a production upgrade until the signing identity has been confirmed.
+The release variant now requires an externally supplied production keystore. The release workflow requires repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, and `ANDROID_CERT_SHA256`, then compares the APK signer against that fingerprint before publishing. These secrets and the installed app's expected signer have not been confirmed here. Do not publish or install over an existing app until the fingerprint is verified.

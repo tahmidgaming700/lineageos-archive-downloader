@@ -150,12 +150,12 @@ object UpdateRepository {
             "getprop ro.twrp.version; " +
                 "getprop ro.orangefox.version; " +
                 "getprop ro.of.version"
-        ).lines()
-            .map { it.trim() }
-            .filter { it.isNotBlank() && it != "0" }
+        ).lines().map { it.trim() }
 
-        return (props.firstOrNull() ?: "not detected") to
-            (props.drop(1).firstOrNull() ?: "not detected")
+        val twrp = props.getOrNull(0)?.takeIf { it.isNotBlank() && it != "0" }
+        val orangeFox = listOfNotNull(props.getOrNull(1), props.getOrNull(2))
+            .firstOrNull { it.isNotBlank() && it != "0" }
+        return (twrp ?: "not detected") to (orangeFox ?: "not detected")
     }
 
     private fun parseMagiskVersion(value: String): String {

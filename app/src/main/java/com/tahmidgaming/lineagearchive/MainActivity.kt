@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -92,6 +93,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     var pendingFlash by remember { mutableStateOf<DownloadStore.Item?>(null) }
     var gapps by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
     var magisk by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
+    var gsis by remember { mutableStateOf<List<AddonDownload>>(emptyList()) }
     var toolsLoading by remember { mutableStateOf(false) }
     var toolsError by remember { mutableStateOf<String?>(null) }
     var toolsRefresh by remember { mutableStateOf(0) }
@@ -148,6 +150,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             runCatching {
                 gapps = AddonRepository.gapps()
                 magisk = AddonRepository.magisk()
+                gsis = AddonRepository.gsi()
             }.onFailure { toolsError = it.message ?: "Unable to load addon downloads" }
             toolsLoading = false
         }
@@ -242,6 +245,9 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                     Screen.DOWNLOADS -> DownloadsScreen(context, downloads, flashCapability, flashMessage, { flashMessage = null }, { item ->
                         val result = FlashManager.flashVerifiedZip(context, item.filename, FlashManager.Recovery.TWRP)
                         flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to start TWRP installation."
+                    }, { item ->
+                        val result = AppUpdateInstaller.install(context, item)
+                        flashMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "Unable to verify or install this APK."
                     }, { screen = Screen.HOME }, { screen = Screen.SETTINGS })
                     Screen.UPDATES -> UpdateCenterScreen(context, selected, currentOsVersion, { file, device, version -> startDownload(file, device ?: "updates", version) }, updateRefresh) { updateRefresh++ }
                     Screen.TOOLS -> ToolsScreen(
@@ -250,6 +256,7 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
                         downloads = downloads,
                         gapps = gapps,
                         magisk = magisk,
+                        gsis = gsis,
                         loading = toolsLoading,
                         error = toolsError,
                         onRefresh = { toolsRefresh++ },
@@ -322,7 +329,7 @@ private fun titleFor(screen: Screen) = when (screen) {
 private fun CheckingContent() {
     Column(Modifier.fillMaxSize().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Text("Software update", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(28.dp)); EmuiUpdateRing(null, "LineageOS", "Updater"); Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(28.dp)); UpdateProgressRing(null, "LineageOS", "Updater"); Spacer(Modifier.height(28.dp))
         Text("Checking…", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp)); Text("Checking for available builds", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -398,6 +405,7 @@ private fun DownloadsScreen(
     flashMessage: String?,
     onDismissFlashMessage: () -> Unit,
     onFlash: (DownloadStore.Item) -> Unit,
+    onInstall: (DownloadStore.Item) -> Unit,
     onBack: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -439,7 +447,7 @@ private fun DownloadsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(24.dp))
-                EmuiUpdateRing(
+                UpdateProgressRing(
                     animated.value,
                     "LineageOS",
                     active.version ?: "Archive"
@@ -528,7 +536,7 @@ private fun DownloadsScreen(
                     contentPadding = PaddingValues(bottom = 20.dp)
                 ) {
                     items(downloads.asReversed()) {
-                        DownloadHistoryCard(it, flashCapability, onFlash)
+                        DownloadHistoryCard(it, flashCapability, onFlash, onInstall)
                     }
                 }
             }
@@ -537,7 +545,7 @@ private fun DownloadsScreen(
 }
 
 @Composable
-private fun EmuiUpdateRing(progress: Float?, centerTitle: String, centerSubtitle: String) {
+private fun UpdateProgressRing(progress: Float?, centerTitle: String, centerSubtitle: String) {
     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(286.dp)) {
         Surface(Modifier.size(286.dp), CircleShape, color = MaterialTheme.colorScheme.surface.copy(.42f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(.65f)), shadowElevation = 16.dp) {}
         if (progress == null) CircularProgressIndicator(Modifier.size(238.dp), strokeWidth = 9.dp, trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(.65f))
@@ -547,15 +555,47 @@ private fun EmuiUpdateRing(progress: Float?, centerTitle: String, centerSubtitle
 }
 
 @Composable
-private fun DownloadHistoryCard(item: DownloadStore.Item, flashCapability: FlashManager.Capability, onFlash: (DownloadStore.Item) -> Unit) { GlassCard { Row(verticalAlignment = Alignment.CenterVertically) { IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) } }; if (flashCapability.ready && item.status.startsWith("Downloaded")) { Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = { onFlash(item) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.Build, null); Spacer(Modifier.width(7.dp)); Text("Flash with TWRP") } } } }
+private fun DownloadHistoryCard(item: DownloadStore.Item, flashCapability: FlashManager.Capability, onFlash: (DownloadStore.Item) -> Unit, onInstall: (DownloadStore.Item) -> Unit) {
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBubble(if (item.verified == true) Icons.Default.CheckCircle else Icons.Default.Download)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(item.device, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(item.status, color = if (item.verified == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (item.verified == true && item.status.startsWith("Downloaded") && item.filename.endsWith(".apk", true)) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = { onInstall(item) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Default.SystemUpdate, null)
+                Spacer(Modifier.width(7.dp))
+                Text("Verify & install app update")
+            }
+            Spacer(Modifier.height(5.dp))
+            Text("Checks the source SHA-256, package ID, and signing certificate before opening Android's installer.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        }
+        if (flashCapability.ready && item.status.startsWith("Downloaded") && item.filename.endsWith(".zip", true)) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = { onFlash(item) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Default.Build, null)
+                Spacer(Modifier.width(7.dp))
+                Text("Flash with TWRP")
+            }
+        }
+    }
+}
 
 @Composable
 private fun SettingsContent(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
+    val uriHandler = LocalUriHandler.current
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 30.dp)) {
         item { Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("One UI-inspired controls with Liquid Glass surfaces", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { GlassCard { SettingRow(Icons.Default.Settings, "Appearance", "Choose how the downloader looks"); Spacer(Modifier.height(14.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) { ThemeChoice("System", ThemeMode.SYSTEM, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Light", ThemeMode.LIGHT, themeMode, onThemeModeChange, Modifier.weight(1f)); ThemeChoice("Dark", ThemeMode.DARK, themeMode, onThemeModeChange, Modifier.weight(1f)) } } }
         item { GlassCard { SettingRow(Icons.Default.Shield, "Verification", "Downloads are checked with SHA-256 when the source provides a checksum."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Info, "Safety", "Downloaded packages are verified with SHA-256 when a checksum is supplied. If root and TWRP are detected, a verified ZIP can be handed to TWRP for installation.") } }
-        item { GlassCard { SettingRow(Icons.Default.Wifi, "Sources", "Official LineageOS builds and the clearly labeled TimSchumi archive."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Storage, "Compatibility", "Android 5.0+ with resumable downloads where the server supports HTTP Range requests."); Spacer(Modifier.height(16.dp)); Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { GlassCard { SettingRow(Icons.Default.Wifi, "Sources", "Official LineageOS builds and the clearly labeled TimSchumi archive."); Spacer(Modifier.height(16.dp)); SettingRow(Icons.Default.Storage, "Compatibility", "Android 6.0+ (API 23) with resumable downloads where the server supports HTTP Range requests."); Spacer(Modifier.height(16.dp)); Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { GlassCard { SettingRow(Icons.Default.Info, "Support development", "Report bugs, suggest supported devices, or contribute code. No verified donation link is configured in this build."); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader/issues") }, modifier = Modifier.fillMaxWidth()) { Text("Report an issue") }; TextButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader/blob/main/CHANGELOG.md") }, modifier = Modifier.fillMaxWidth()) { Text("Read the changelog") }; TextButton(onClick = { uriHandler.openUri("https://github.com/tahmidgaming700/lineageos-archive-downloader") }, modifier = Modifier.fillMaxWidth()) { Text("Open project on GitHub") } } }
     }
 }
 

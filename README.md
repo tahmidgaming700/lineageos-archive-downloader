@@ -2,7 +2,7 @@
 
 A native Android utility for discovering LineageOS builds, browsing historical archives, downloading ROM packages, and checking file integrity.
 
-> **Development build:** Version 2.0.0 is under development. Do not treat this branch as a published or production-ready release. Advanced GSI, DD Flasher, and Harmony Recovery work must be considered available only to the extent implemented and tested in the source.
+> **Development build:** Version 2.0.0 is under development and is not yet published. GSI discovery, recovery release tracking, and APK installation safeguards are implemented in this branch, but they still need broader device testing. DD flashing is root-only and destructive. Harmony Recovery is a configurable GitHub release tracker; it does not build a recovery image.
 
 ## Project status
 
@@ -11,7 +11,7 @@ A native Android utility for discovering LineageOS builds, browsing historical a
 - Development version: `2.0.0` (version code `2000`)
 - Current Android minimum SDK: API 23 (Android 6.0). Android 5.0/5.0.2 is **not supported** by this build.
 - Release status: **not published**
-- Release signing: the current Gradle release variant still references the debug signing configuration. A production release must not be advertised as an in-place update until the signing certificate is confirmed compatible with the installed app.
+- Release signing: the release variant now requires an injected production keystore. CI refuses publication unless the configured certificate fingerprint matches `ANDROID_CERT_SHA256`. Those secrets have not been confirmed/configured here, and no production release has been published.
 
 ## Existing functionality
 
@@ -25,7 +25,11 @@ The existing application includes these capabilities (check the current default 
 - Calculates SHA-256 after download when a trusted expected digest is available.
 - Separates TimSchumi historical builds from official current releases.
 - Offers light, dark and system theme options.
-- Includes tool screens for recovery/image workflows and add-on downloads; root and device limitations apply.
+- Includes root-only recovery ZIP handoff and DD image flashing with explicit destructive-action confirmation; partition compatibility remains device-specific.
+- Discovers community GSI release assets from public Treble/LineageOS projects and links directly to their sources. GSI availability is not a device-compatibility guarantee.
+- Tracks recovery releases from a user-configured GitHub repository (including Harmony Recovery projects) without hard-coding an unverified repository URL.
+- Checks downloaded APK SHA-256, package ID, and signing certificate before opening Android's package installer for a self-update.
+- Provides update tracking for the app, LineageOS, GApps, Magisk, and detected recovery properties.
 
 ## Source labels and safety
 
@@ -46,11 +50,11 @@ See [the release gate and implementation checklist](docs/RELEASE_2.0.0_PLAN.md).
 
 - Preserve the existing downloader and migrate data safely.
 - Improve device/build discovery, caching and download verification.
-- Add explainable GSI compatibility discovery and recovery update tracking.
-- Develop DD Flasher only for supported workflows, with explicit destructive-action confirmation.
-- Develop Harmony Recovery configuration/build orchestration without fabricating build artifacts.
-- Add secure application-update metadata and release verification.
-- Improve documentation, tests and CI.
+- Extend GSI results with device-specific compatibility metadata; current results are discovery-only.
+- Validate DD Flasher partition handling and recovery workflows on test devices before production use.
+- Add a real Harmony Recovery build pipeline only if its source, build requirements, and a suitable Linux build environment are confirmed; this app currently tracks configured GitHub releases only.
+- Configure the production signing secrets and test signer matching against the actual installed app certificate.
+- Continue expanding unit tests, device testing, and CI.
 
 Items in a plan are not claims that those features are already complete. See [CHANGELOG.md](CHANGELOG.md) for confirmed changes and [GitHub Actions](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions) for actual build results.
 
@@ -63,7 +67,7 @@ gradle :app:assembleDebug --stacktrace
 gradle :app:testDebugUnitTest --stacktrace
 ```
 
-The commands above are instructions, not a claim that they have passed in this environment. Install the debug APK only after reviewing the build output and understanding its signing identity.
+GitHub Actions runs the unit tests and builds a debug APK for pull requests. Debug APKs use a different signing identity from production and cannot safely replace a differently signed installation. The release workflow requires these repository secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, and `ANDROID_CERT_SHA256`. The final fingerprint must be the app-signing certificate expected on target devices (not merely an upload-key fingerprint).
 
 ## Contributing
 

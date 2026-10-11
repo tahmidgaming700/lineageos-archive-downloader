@@ -4,14 +4,23 @@ This file distinguishes confirmed repository history from planned work. An entry
 
 ## [2.0.0] — Development branch; not released
 
-### Development foundation
-- Added a release gate document covering signing identity, upgrade compatibility, testing, verification and publication.
-- Added contribution and security-reporting guidance.
-- Set the development version to 2.0.0 (version code 2000) on the `release/2.0.0-foundation` branch.
-- Updated project documentation to distinguish implemented functionality from planned work.
+### Implemented in the development branch
+- Added live GSI release discovery from community Treble/LineageOS GitHub sources, with clear compatibility warnings and source links.
+- Added a configurable Harmony Recovery release tracker using real GitHub release assets; it does not fabricate or build recovery images.
+- Added APK update checks that require a source SHA-256, matching package ID, and matching signing-certificate fingerprint before opening the Android installer.
+- Added unit tests for numeric version comparison and update detection.
+- Fixed duplicate worker declaration and invalid Kotlin escape sequence that blocked compilation.
+- Changed release automation to require production signing secrets and verify the release certificate before publishing.
+- Corrected minimum-Android-version text and APK MIME metadata.
 
-### Not yet claimed
-The GSI discovery, full Harmony Recovery build orchestration, secure self-updater, broader recovery tracking and all requested device compatibility testing are not claimed complete by this foundation commit. Do not publish a release until implementation and validation gates are met.
+### Still required before release
+- CI must pass on the latest commit, including the unit tests.
+- Confirm signing compatibility with the actual installed app and test upgrades on devices.
+- Validate GSI compatibility and recovery/DD flashing behaviour on supported hardware.
+- Configure the release signing secrets and verify the production release workflow.
+- Configure a verified funding link if financial support is to be offered.
+
+This is still a development branch, not a published 2.0.0 release.
 
 ## [1.0.37] — Unreleased on the previous default branch
 
