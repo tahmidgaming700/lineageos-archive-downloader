@@ -329,7 +329,7 @@ private fun titleFor(screen: Screen) = when (screen) {
 private fun CheckingContent() {
     Column(Modifier.fillMaxSize().padding(bottom = 36.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Text("Software update", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(28.dp)); EmuiUpdateRing(null, "LineageOS", "Updater"); Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(28.dp)); UpdateProgressRing(null, "LineageOS", "Updater"); Spacer(Modifier.height(28.dp))
         Text("Checking…", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp)); Text("Checking for available builds", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -447,7 +447,7 @@ private fun DownloadsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(24.dp))
-                EmuiUpdateRing(
+                UpdateProgressRing(
                     animated.value,
                     "LineageOS",
                     active.version ?: "Archive"
@@ -545,7 +545,7 @@ private fun DownloadsScreen(
 }
 
 @Composable
-private fun EmuiUpdateRing(progress: Float?, centerTitle: String, centerSubtitle: String) {
+private fun UpdateProgressRing(progress: Float?, centerTitle: String, centerSubtitle: String) {
     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(286.dp)) {
         Surface(Modifier.size(286.dp), CircleShape, color = MaterialTheme.colorScheme.surface.copy(.42f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(.65f)), shadowElevation = 16.dp) {}
         if (progress == null) CircularProgressIndicator(Modifier.size(238.dp), strokeWidth = 9.dp, trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(.65f))
