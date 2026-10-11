@@ -125,7 +125,12 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
     suspend fun refreshForDevice(device: LineageDevice?) {
         if (device == null) return
         runCatching { LineageRepository.builds(device.model) }
-            .onSuccess { builds = it.sortedByDescending(LineageBuild::datetime) }
+            .onSuccess {
+                builds = it.sortedByDescending(LineageBuild::datetime)
+                if (LineageRepository.isUsingCachedFallback(LineageRepository.buildsCacheKey(device.model))) {
+                    error = "Offline mode: showing cached builds for " + device.name + ". Check Diagnostics for the last metadata cache time."
+                }
+            }
             .onFailure { error = it.message ?: "Unable to check for builds" }
     }
 
@@ -141,6 +146,9 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             .onSuccess { list ->
                 devices = list
                 selected = DeviceDetector.match(detected, list)
+                if (LineageRepository.isUsingCachedFallback("devices")) {
+                    error = "Offline mode: showing cached device metadata. Check Diagnostics for the last cache update."
+                }
                 refreshForDevice(selected)
             }
             .onFailure { error = it.message ?: "Unable to connect to LineageOS" }
@@ -169,7 +177,13 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
         loading = true
         error = null
         runCatching { LineageRepository.devices() }
-            .onSuccess { devices = it; screen = Screen.DEVICES }
+            .onSuccess {
+                devices = it
+                screen = Screen.DEVICES
+                if (LineageRepository.isUsingCachedFallback("devices")) {
+                    error = "Offline mode: showing cached device metadata. Check Diagnostics for the last cache update."
+                }
+            }
             .onFailure { error = it.message ?: "Unable to load devices" }
         loading = false
     }
@@ -192,7 +206,12 @@ private fun ArchiveApp(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> U
             loading = true
             error = null
             runCatching { LineageRepository.archiveBuilds(device.model) }
-                .onSuccess { archiveBuilds = it.sortedByDescending { item -> item.id } }
+                .onSuccess {
+                    archiveBuilds = it.sortedByDescending { item -> item.id }
+                    if (LineageRepository.isUsingCachedFallback("archive_summaries")) {
+                        error = "Offline mode: showing cached archive metadata. Check Diagnostics for the last cache update."
+                    }
+                }
                 .onFailure { error = it.message ?: "Unable to load archive" }
             loading = false
         }
