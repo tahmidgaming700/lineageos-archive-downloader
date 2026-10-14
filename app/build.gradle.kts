@@ -14,8 +14,8 @@ android {
         // Android 6.0 (API 23) is the validated minimum SDK for this codebase.
         minSdk = 23
         targetSdk = 36
-        versionCode = 2000
-        versionName = "2.0.0"
+        versionCode = 2001
+        versionName = "2.0.1"
     }
 
     signingConfigs {
