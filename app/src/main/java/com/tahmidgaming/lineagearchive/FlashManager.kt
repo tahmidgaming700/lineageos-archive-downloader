@@ -59,8 +59,8 @@ object FlashManager {
             [ -f "\$src" ] || { echo SOURCE_IMAGE_MISSING; exit 2; }
             [ -b "\$dst" ] || { echo TARGET_NOT_BLOCK_DEVICE; exit 3; }
             command -v blockdev >/dev/null 2>&1 || { echo BLOCKDEV_UNAVAILABLE; exit 4; }
-            src_size=\$(wc -c < "\$src")
-            dst_size=\$(blockdev --getsize64 "\$dst")
+            src_size=\$(wc -c < "\$src" | tr -d '[:space:]')
+            dst_size=\$(blockdev --getsize64 "\$dst" | tr -d '[:space:]')
             [ "\$src_size" -le "\$dst_size" ] || { echo IMAGE_LARGER_THAN_PARTITION; exit 5; }
             dd if="\$src" of="\$dst" bs=4M conv=fsync
             sync
