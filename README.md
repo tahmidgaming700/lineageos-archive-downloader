@@ -57,7 +57,7 @@ gradle :app:assembleDebug --stacktrace
 gradle :app:testDebugUnitTest --stacktrace
 ```
 
-The release workflow requires repository Actions secrets named `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_CERT_SHA256`. It refuses to publish if signing secrets are missing or the release certificate fingerprint does not match. Never commit a keystore, password, private signing key or access token.
+The release workflow requires repository Actions secrets named `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_CERT_SHA256`. It refuses to publish if signing secrets are missing or the release certificate fingerprint does not match. If you use a fine-grained personal access token with `gh secret set`, grant **Repository permissions → Secrets: Read and write** for this repository; **Agent secrets** is a different permission and does not authorize GitHub Actions repository secrets. Ensure the token is scoped to this repository and has not expired. Never commit a keystore, password, private signing key or access token.
 
 See [CHANGELOG.md](CHANGELOG.md), [GitHub Actions](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions) and [Releases](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases) for version history and actual build/release status.
 
