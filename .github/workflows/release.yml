@@ -56,6 +56,11 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Run the non-release checks before requiring production signing material.
+      # This keeps source/build failures separate from missing repository secrets.
+      - name: Run unit tests and debug build
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
+
       - name: Configure production signing
         if: steps.existing.outputs.exists != 'true'
         env:
