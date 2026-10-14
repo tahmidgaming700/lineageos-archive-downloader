@@ -37,6 +37,8 @@ fun ToolsScreen(
     var pendingRecovery by remember { mutableStateOf<Pair<DownloadStore.Item, FlashManager.Recovery>?>(null) }
     var pendingDd by remember { mutableStateOf<Pair<DownloadStore.Item, String>?>(null) }
     val verified = downloads.filter { it.verified == true && it.status.startsWith("Downloaded") }
+    // GSI images without an upstream digest require explicit confirmation.
+    val images = downloads.filter { item -> item.status.startsWith("Downloaded") && item.filename.endsWith(".img", true) && (item.verified == true || (item.device == "gsi" && item.verified == null)) }
     val uriHandler = LocalUriHandler.current
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)) {
         item {
@@ -101,16 +103,17 @@ fun ToolsScreen(
             ToolsCard {
                 Text("dd image flasher", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
-                Text("Root-only raw image flashing to an explicitly selected by-name partition. This can permanently brick a device if the image or target is wrong.", color = MaterialTheme.colorScheme.error)
+                Text("Root-only raw .img flashing. GSI images without a publisher checksum require extra confirmation and are not checksum-verified. Many dynamic-partition devices require fastbootd instead; direct DD is only appropriate when the exact writable block target is confirmed.", color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(12.dp))
-                val images = verified.filter { it.filename.endsWith(".img", true) }
+                // This list includes source-checksummed images and completed GSI .img downloads without a source digest.
                 if (images.isEmpty()) {
-                    Text("No verified .img downloads available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("No eligible raw .img downloads yet. Download a raw GSI image in GSI Discovery; compressed .img.xz/.img.gz assets must be extracted first.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     images.take(8).forEach { item ->
                         Text(item.filename, fontWeight = FontWeight.SemiBold, maxLines = 2)
                         Spacer(Modifier.height(6.dp))
-                        listOf("boot", "boot_a", "boot_b", "system", "system_a", "system_b", "recovery", "vendor_boot", "dtbo")
+                        Text(if (item.verified == true) "SHA-256 matched the published digest." else "No publisher SHA-256 was available; the download is not checksum-verified.", color = if (item.verified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        (if (item.device == "gsi") listOf("system", "system_a", "system_b") else listOf("boot", "boot_a", "boot_b", "system", "system_a", "system_b", "recovery", "vendor_boot", "dtbo"))
                             .chunked(3).forEach { targets ->
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                                     targets.forEach { target ->
@@ -230,7 +233,7 @@ fun ToolsScreen(
         AlertDialog(
             onDismissRequest = { pendingDd = null },
             title = { Text("dd → " + target) },
-            text = { Text("This writes " + item.filename + " directly to /dev/block/by-name/" + target + ". A wrong image or target can make the device unbootable. Continue only if you have confirmed the partition layout.") },
+            text = { Text(if (item.device == "gsi") "This writes raw GSI image " + item.filename + " directly to /dev/block/by-name/" + target + ". " + (if (item.verified == true) "The file matched the source-published SHA-256 digest. " else "The source supplied no SHA-256 digest, so this file was NOT checksum-verified. ") + "Confirm the bootloader is unlocked, the exact block target is correct and writable, and the image fits. Devices with dynamic partitions commonly require fastbootd instead of DD. A wrong image or target can brick the device." else "This writes " + item.filename + " directly to /dev/block/by-name/" + target + ". A wrong image or target can make the device unbootable. Confirm the partition layout and image size.") },
             confirmButton = {
                 TextButton(onClick = {
                     pendingDd = null
