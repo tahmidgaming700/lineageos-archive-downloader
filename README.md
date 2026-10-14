@@ -1,96 +1,70 @@
 # Lineage Updater & Downloader
 
-A native Android utility for discovering LineageOS builds, browsing historical archives, downloading ROM packages, and checking file integrity. Version 2.0.0 uses a new Android package identity and installs separately from the legacy downloader.
+A native Android utility for LineageOS device/build discovery, historical ROM archives, verified downloads, community GSI discovery, recovery release tracking, and root-only flashing tools.
 
-> **Development build:** Version 2.0.0 is under development and is not yet published. GSI discovery, recovery release tracking, and APK installation safeguards are implemented in this branch, but they still need broader device testing. DD flashing is root-only and destructive. Harmony Recovery is a configurable GitHub release tracker; it does not build a recovery image.
+## Current version
 
-## Project status
-
-- Integrated branch: `main` (2.0.0 development build; public release is still blocked by missing signing secrets)
+- Latest published release before this update: [2.0.0](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases/tag/v2.0.0)
+- Source version being prepared: **2.0.1** (version code `2001`). It is not published until the GitHub Actions release workflow succeeds.
 - Application ID: `com.tahmidgaming.lineageupdater`
-- Development version: `2.0.0` (version code `2000`)
-- Current Android minimum SDK: API 23 (Android 6.0). Android 5.0/5.0.2 is **not supported** by this build.
-- Release status: **not published**
-- Release signing: the release variant now requires an injected production keystore. CI refuses publication unless the configured certificate fingerprint matches `ANDROID_CERT_SHA256`. Those secrets have not been confirmed/configured here, and no production release has been published.
+- Minimum Android version: Android 6.0 (API 23). Android 5.0/5.0.2 is not supported.
+- Package migration: 2.x installs separately from the legacy `com.tahmidgaming.lineagearchive` package; it does not upgrade that package in place.
 
-## Publishing a production release
+## GSI discovery, downloading and DD installation
 
-The release workflow intentionally refuses to publish an unsigned or incorrectly signed APK. The first attempt after merging 2.0.0 stopped because the repository secret `ANDROID_KEYSTORE_BASE64` is missing. Configure all of these under **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
+GSI Discovery lists public release assets from community Treble/LineageOS projects. It filters assets by filename-based CPU architecture hints and displays device properties such as ABI, Android API level, Treble status, A/B property and dynamic-partition property when available.
 
-- `ANDROID_KEYSTORE_BASE64`: base64-encoded production keystore file.
-- `ANDROID_KEYSTORE_PASSWORD`: keystore password.
-- `ANDROID_KEY_ALIAS`: signing key alias.
-- `ANDROID_KEY_PASSWORD`: key password.
-- `ANDROID_CERT_SHA256`: SHA-256 certificate fingerprint expected from that key.
+1. Open **Tools → GSI Discovery** and choose the architecture filter matching the device and GSI build.
+2. Read the release notes and confirm the Android release, ABI, vendor interface/VNDK, required variant (for example, vndklite), and partition layout. App-detected properties are hints, not an automated compatibility certification.
+3. Download the asset. When the source provides a SHA-256 digest, the app checks the downloaded bytes against it. If no digest is published, the download is marked as not checksum-verified.
+4. For a raw `.img` asset, open **Tools → dd image flasher** after the download completes. Raw GSI images may be offered for `system`, `system_a`, or `system_b`. Confirm the exact partition, image size, root access and device-specific instructions before writing.
+5. Compressed `.img.xz` and `.img.gz` assets must be extracted to raw `.img` before DD flashing. A `.zip` release archive is not itself a raw partition image and must not be sent to DD.
 
-Do not commit a keystore, password, private signing key, or access token to the repository. The fingerprint must be from the exact key used to sign the APK. Once all five secrets are configured, open [the failed Publish Release workflow](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions/runs/38142572425) and use **Re-run failed jobs**. The workflow will build the release APK, verify the certificate, and publish `app-updater.apk` plus its SHA-256 sidecar only if every gate passes.
+**DD flashing is device-specific and destructive.** It requires root access and a valid writable block-device target. The flasher checks that the image fits the selected target before writing. Devices using dynamic partitions commonly require `fastbootd` and the device/GSI project's documented procedure instead of direct `dd` writes. Do not assume a partition name is safe or compatible. Back up important data and confirm bootloader-unlock requirements before proceeding. A wrong image or target can cause data loss or prevent the device from booting.
+
+### What “compatible” means here
+
+The app helps filter by architecture and show selected device properties. It cannot guarantee that a GSI will boot or that camera, cellular, audio, encryption or other hardware will work. Filename filters can miss or misclassify unusual naming conventions. Confirm compatibility with the device community and GSI maintainer before flashing.
 
 ## Existing functionality
 
-The existing application includes these capabilities (check the current default branch and latest CI results for current status):
-
-- Discovers devices using LineageOS device metadata.
-- Queries the official LineageOS updater API for current build metadata.
-- Displays available build details including filename, size and published checksum when provided.
-- Downloads ROM ZIPs with background progress notifications.
-- Supports resume when the server supports HTTP range requests.
-- Caches public device/build/archive metadata locally and falls back to cached results when network requests fail.
-- Checks for app updates daily when connected and can notify the user; it does not silently install updates.
-- Calculates SHA-256 after download when a trusted expected digest is available.
+- Discovers devices using LineageOS device metadata and queries the official LineageOS updater API.
+- Displays build metadata, filenames, file sizes and published checksums when available.
+- Downloads ROM packages with background progress notifications and resumable transfers where the server supports HTTP range requests.
+- Calculates SHA-256 after download and compares it with a trusted expected digest when available.
+- Caches public device/build/archive metadata and falls back to cached results when network requests fail.
 - Separates TimSchumi historical builds from official current releases.
-- Offers light, dark and system theme options.
-- Includes root-only recovery ZIP handoff and DD image flashing with explicit destructive-action confirmation; partition compatibility remains device-specific.
-- Discovers community GSI release assets from public Treble/LineageOS projects and links directly to their sources. GSI availability is not a device-compatibility guarantee.
-- Tracks recovery releases from a user-configured GitHub repository (including Harmony Recovery projects) without hard-coding an unverified repository URL.
-- Checks downloaded APK SHA-256, package ID, and signing certificate before opening Android's package installer for a self-update.
-- Provides update tracking for the app, LineageOS, GApps, Magisk, and detected recovery properties.
+- Tracks app updates and notifies users; app installation remains user-confirmed and signature-checked.
+- Provides root-only recovery ZIP handoff, DD image flashing, GApps/Magisk discovery and a configurable Harmony Recovery release tracker.
+- Includes a Harmony Recovery build-script planner. It does not compile or guarantee a bootable recovery image on the phone.
+- Provides light, dark and system theme options, changelog, diagnostics and support information.
 
-## Source labels and safety
+## Sources and integrity
 
-### Official LineageOS sources
-- Device metadata: [LineageOS hudson](https://github.com/LineageOS/hudson)
-- Current build API: `https://download.lineageos.org/api/v2/devices/{codename}/builds`
-- Verification instructions: [LineageOS Wiki](https://wiki.lineageos.org/)
+- Official LineageOS device metadata: [LineageOS hudson](https://github.com/LineageOS/hudson)
+- Current-build API: `https://download.lineageos.org/api/v2/devices/{codename}/builds`
+- LineageOS installation guidance: [LineageOS Wiki](https://wiki.lineageos.org/)
+- Community GSI sources: [Treble builds](https://github.com/ponces/treble_build_los/releases) and [Unified LineageOS builds](https://github.com/AndyYan/lineage_build_unified/releases)
 
-### Historical archives
-The TimSchumi archive is an independent, unofficial archive. Historical packages can be unsupported or vulnerable. Do not interpret their availability as official support.
-
-### Integrity is not authenticity
-SHA-256 can establish that downloaded bytes match a known expected digest. It does not, by itself, prove who produced the file. Follow the ROM project's signature-verification guidance where applicable.
-
-## Version 2.0.0 development plan
-
-See [the release gate and implementation checklist](docs/RELEASE_2.0.0_PLAN.md). The plan includes:
-
-- Preserve the existing downloader and migrate data safely.
-- Improve device/build discovery, caching and download verification.
-- Extend GSI results with device-specific compatibility metadata; current results are discovery-only.
-- Validate DD Flasher partition handling and recovery workflows on test devices before production use.
-- Add a real Harmony Recovery build pipeline only if its source, build requirements, and a suitable Linux build environment are confirmed; this app currently tracks configured GitHub releases only.
-- Configure the production signing secrets and test signer matching against the actual installed app certificate.
-- Continue expanding unit tests, device testing, and CI.
-
-Items in a plan are not claims that those features are already complete. See [CHANGELOG.md](CHANGELOG.md) for confirmed changes and [GitHub Actions](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions) for actual build results.
+The TimSchumi archive is an independent, unofficial archive. Historical packages may be unsupported or vulnerable. SHA-256 confirms that bytes match a supplied digest; it does not by itself prove the publisher's identity. Follow source signature-verification guidance where available.
 
 ## Build from source
 
-Requirements: Android SDK, JDK 17, and Gradle 8.11.1 (or use the repository's configured GitHub Actions workflow).
+Requirements: Android SDK, JDK 17 and Gradle 8.11.1 (or use the repository's configured GitHub Actions workflow).
 
 ```bash
 gradle :app:assembleDebug --stacktrace
 gradle :app:testDebugUnitTest --stacktrace
 ```
 
-GitHub Actions runs the unit tests and builds a debug APK for pull requests. Debug APKs use a different signing identity from production and cannot safely replace a differently signed installation. The release workflow requires these repository secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, and `ANDROID_CERT_SHA256`. The final fingerprint must be the app-signing certificate expected on target devices (not merely an upload-key fingerprint).
+The release workflow requires repository Actions secrets named `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `ANDROID_CERT_SHA256`. It refuses to publish if signing secrets are missing or the release certificate fingerprint does not match. Never commit a keystore, password, private signing key or access token.
 
-## Contributing
+See [CHANGELOG.md](CHANGELOG.md), [GitHub Actions](https://github.com/tahmidgaming700/lineageos-archive-downloader/actions) and [Releases](https://github.com/tahmidgaming700/lineageos-archive-downloader/releases) for version history and actual build/release status.
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md). Security reports should follow [SECURITY.md](SECURITY.md).
+## Contributing and support
 
-## Support development
-
-Voluntary support can help fund development time, test devices, build infrastructure, documentation and compatibility testing. No donation link has been configured or verified for this project yet; no payment link is intentionally displayed here. To contribute now, use issues and pull requests on [GitHub](https://github.com/tahmidgaming700/lineageos-archive-downloader).
+Read [CONTRIBUTING.md](CONTRIBUTING.md). Security reports should follow [SECURITY.md](SECURITY.md). No donation destination is verified/configured in this repository; use [GitHub issues and pull requests](https://github.com/tahmidgaming700/lineageos-archive-downloader) to contribute.
 
 ## Licence
 
-The repository has no licence metadata detected by the GitHub API at the time of this audit, although the existing README states Apache License 2.0. Confirm that the repository contains the appropriate LICENSE file and third-party notices before representing the licence as verified.
+Confirm the repository's licence file and third-party notices before redistributing. Do not infer a licence solely from README text.
