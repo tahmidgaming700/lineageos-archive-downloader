@@ -117,7 +117,8 @@ fun GsiDiscoveryScreen(
                         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                             Text(item.name, fontWeight = FontWeight.SemiBold)
                             Text(item.version + " • " + item.source, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                            TextButton(onClick = { onDownload(item) }) { Text("Download and verify") }
+                            Text(when { item.name.endsWith(".img", true) -> "Raw .img • DD candidate after download"; item.name.endsWith(".img.xz", true) || item.name.endsWith(".img.gz", true) -> "Compressed image • extract before DD flashing"; item.name.endsWith(".zip", true) -> "Archive • not directly flashable with DD"; else -> "Check source installation instructions" }, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = { onDownload(item) }) { Text(if (item.sha256 != null) "Download • SHA-256 available" else "Download • no source checksum") }
                         }
                     }
                 }
