@@ -185,6 +185,13 @@ private fun JkmOtaLabScreen(
                             status = "Enter the exact installed source build before searching for an incremental OTA."
                             return@Button
                         }
+                        val selectedModel = model
+                        val selectedBaseModel = baseModel
+                        val selectedRegion = region
+                        val selectedVendor = vendor
+                        val selectedTarget = targetVersion
+                        val fullOtaSearch = workflow == "FullOTA"
+                        val incrementalSource = sourceVersion
                         busy = true
                         status = "Searching the configured HiSuite Proxy…"
                         candidates.clear()
@@ -192,10 +199,10 @@ private fun JkmOtaLabScreen(
                             val result = withContext(Dispatchers.IO) {
                                 val found = mutableListOf<OtaCandidate>()
                                 val messages = mutableListOf<String>()
-                                val searches = if (workflow == "FullOTA") listOf(baseModel, model).distinct() else listOf(model)
+                                val searches = if (fullOtaSearch) listOf(selectedBaseModel, selectedModel).distinct() else listOf(selectedModel)
                                 searches.forEach { queryModel ->
                                     runCatching {
-                                        val query = HuaweiFirmwareRepository.Query(queryModel, region, vendor, targetVersion)
+                                        val query = HuaweiFirmwareRepository.Query(queryModel, selectedRegion, selectedVendor, selectedTarget)
                                         HuaweiFirmwareRepository.getFileList(proxyUrl, query)
                                     }.onSuccess { response ->
                                         response.files.forEach { file ->
@@ -204,7 +211,7 @@ private fun JkmOtaLabScreen(
                                                 "PRELOAD" in name -> "PRELOAD"
                                                 "CUST" in name -> "CUST CANDIDATE"
                                                 "LGRP" in name || "OVS" in name -> "BASE CANDIDATE"
-                                                queryModel == model -> "HANDSET / CUST CANDIDATE"
+                                                queryModel == selectedModel -> "HANDSET / CUST CANDIDATE"
                                                 else -> "OTA PACKAGE"
                                             }
                                             found += OtaCandidate(role, queryModel, file.filename, file.size, file.sha256, file.url, file.version)
@@ -217,7 +224,11 @@ private fun JkmOtaLabScreen(
                             candidates.addAll(result.first)
                             status = if (result.first.isEmpty()) result.second.joinToString("\n").ifBlank {
                                 "No direct package links were returned by the configured proxy."
-                            } else "Found " + result.first.size + " candidate package(s). Verify release grouping and compatibility before downloading."
+                            } else {
+                                val suffix = if (fullOtaSearch) "Verify BASE/CUST/PRELOAD release grouping." else
+                                    "Entered source build " + incrementalSource + " is a manual note; the proxy response is not independently source-build verified."
+                                "Found " + result.first.size + " candidate package(s). " + suffix
+                            }
                             busy = false
                         }
                     },
