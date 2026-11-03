@@ -142,10 +142,13 @@ object HuaweiFirmwareRepository {
         val sha = sequenceOf("sha256", "sha_256", "checksum")
             .mapNotNull { json.optString(it).takeIf { v -> v.matches(Regex("(?i)[0-9a-f]{64}")) } }
             .firstOrNull()
+        val version = sequenceOf("version", "targetVersion", "build", "versionName")
+            .mapNotNull { json.optString(it).takeIf(String::isNotBlank) }
+            .firstOrNull()
         if (filename.isNotBlank() && (filename.contains(".zip", true) ||
                 filename.contains(".app", true) || filename.contains(".bin", true) ||
                 filename.contains(".dgtks", true))) {
-            output.putIfAbsent(url, FirmwareFile(filename, url, size, sha))
+            output.putIfAbsent(url, FirmwareFile(filename, url, size, sha, version))
         }
     }
 }
