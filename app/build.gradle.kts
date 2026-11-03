@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         applicationId = "com.tahmidgaming.huaweiosupdater"
-        // Android 7.0 (API 24) minimum supported version.
-        minSdk = 24
+        // Android 9 (API 28) minimum supported version.
+        minSdk = 28
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
