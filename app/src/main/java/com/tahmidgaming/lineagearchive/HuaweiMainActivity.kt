@@ -307,6 +307,15 @@ private fun HuaweiUpdaterApp(
                 HuaweiTab.TOOLS -> {
                     Text("Huawei tools", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Text("Open the related firmware utilities. These open in your browser; the updater interface itself is native.")
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("JKM OTA Lab", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("FullOTA and incremental OTA planning, JKM regional discovery, experimental China candidates and Shizuku updater handoff.")
+                            Button(onClick = { context.startActivity(Intent(context, HuaweiOtaLabActivity::class.java)) }, modifier = Modifier.fillMaxWidth()) {
+                                Text("Open JKM OTA Lab")
+                            }
+                        }
+                    }
                     ToolCard("Firm Finder", "Search Huawei firmware by model, region and target version.", "https://professorjtj.github.io/", openUrl)
                     ToolCard("Firm Finder v2", "Alternative firmware finder interface.", "https://professorjtj.github.io/v2/", openUrl)
                     ToolCard("BaseArchive", "Browse archived Huawei firmware packages.", "https://professorjtj.github.io/BaseArchive/", openUrl)
