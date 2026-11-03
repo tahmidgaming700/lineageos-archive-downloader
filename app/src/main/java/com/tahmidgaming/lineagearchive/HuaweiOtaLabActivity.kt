@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.content.ComponentName
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -75,29 +76,44 @@ class HuaweiOtaLabActivity : ComponentActivity() {
                 Toast.makeText(this, "Shizuku is not running. Start its service first.", Toast.LENGTH_LONG).show()
                 return
             }
+            if (Shizuku.isPreV11()) {
+                Toast.makeText(this, "Shizuku API v11 or newer is required.", Toast.LENGTH_LONG).show()
+                return
+            }
             if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                 Shizuku.requestPermission(7301)
                 Toast.makeText(this, "Grant Shizuku permission, then tap again.", Toast.LENGTH_LONG).show()
                 return
             }
-            Thread {
-                val message = runCatching {
-                    val process = Shizuku.newProcess(
-                        arrayOf("am", "start", "-a", "android.settings.SYSTEM_UPDATE_SETTINGS"), null, null
-                    )
-                    val output = process.inputStream.bufferedReader().use { it.readText() }
-                    val error = process.errorStream.bufferedReader().use { it.readText() }
-                    val exit = process.waitFor()
-                    if (exit == 0) "System Update launch requested through Shizuku."
-                    else "Shizuku command failed: " + (error + output).take(300)
-                }.getOrElse { "Shizuku handoff failed: " + (it.message ?: "unknown error") }
-                runOnUiThread { Toast.makeText(this, message, Toast.LENGTH_LONG).show() }
-            }.start()
+
+            val args = Shizuku.UserServiceArgs(
+                ComponentName(packageName, HuaweiUpdaterUserService::class.java.name)
+            ).daemon(false).processNameSuffix("ota_handoff").debuggable(BuildConfig.DEBUG)
+                .version(BuildConfig.VERSION_CODE)
+
+            val connection = object : android.content.ServiceConnection {
+                override fun onServiceConnected(name: ComponentName, service: android.os.IBinder) {
+                    Thread {
+                        val message = runCatching {
+                            IUserService.Stub.asInterface(service).launchSystemUpdate()
+                        }.getOrElse { "Shizuku handoff failed: " + (it.message ?: "unknown error") }
+                        runOnUiThread {
+                            Toast.makeText(this@HuaweiOtaLabActivity, message, Toast.LENGTH_LONG).show()
+                            runCatching { Shizuku.unbindUserService(args, this, true) }
+                        }
+                    }.start()
+                }
+
+                override fun onServiceDisconnected(name: ComponentName) {
+                    // The one-shot handoff has completed or the Shizuku service stopped.
+                }
+            }
+            Shizuku.bindUserService(args, connection)
+            Toast.makeText(this, "Starting privileged updater handoff…", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, e.message ?: "Shizuku is unavailable", Toast.LENGTH_LONG).show()
         }
-    }
-}
+    }}
 
 @Composable
 private fun JkmOtaLabScreen(
@@ -259,7 +275,7 @@ private fun JkmOtaLabScreen(
                 Text("With Shizuku running and permission granted, this asks Android to open System Update through the shell. It does not inject a package, alter Huawei metadata, bypass signature checks or force the updater to accept an unsupported ZIP.")
                 Button(onClick = onOpenUpdater, modifier = Modifier.fillMaxWidth()) { Text("Open System Update via Shizuku") }
                 TextButton(onClick = {
-                    runCatching { context.startActivity(Intent(Settings.ACTION_SYSTEM_UPDATE_SETTINGS)) }
+                    runCatching { context.startActivity(Intent("android.settings.SYSTEM_UPDATE_SETTINGS")) }
                         .onFailure { Toast.makeText(context, "System Update screen is unavailable on this build.", Toast.LENGTH_LONG).show() }
                 }) { Text("Open System Update normally") }
             }
