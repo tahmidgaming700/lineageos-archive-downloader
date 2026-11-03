@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         applicationId = "com.tahmidgaming.huaweiosupdater"
-        // Android 6.0 (API 23) compatibility floor: Samsung TouchWiz through Android 16.
-        minSdk = 23
+        // Android 7.0 (API 24) minimum supported version.
+        minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
