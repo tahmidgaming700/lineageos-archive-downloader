@@ -164,6 +164,16 @@ private fun JkmOtaLabScreen(
                 }
                 if (advanced) {
                     Text("Experimental model tokens: JKM-LX1, JKM-LX2, JKM-LX3, JKM-AL00, JKM-TL00 and JKM-L00. China C00 results are candidates only; never cross-flash C00 and global CUST packages.")
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { model = "JKM-L00" }) { Text("JKM-L00") }
+                        TextButton(onClick = { model = "JKM-AL00"; region = "C00"; vendor = "hw-cn" }) { Text("AL00 · C00") }
+                        TextButton(onClick = { model = "JKM-TL00"; region = "C00"; vendor = "hw-cn" }) { Text("TL00 · C00") }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { model = "JKM-LX1" }) { Text("JKM-LX1") }
+                        TextButton(onClick = { model = "JKM-LX2" }) { Text("JKM-LX2") }
+                        TextButton(onClick = { model = "JKM-LX3" }) { Text("JKM-LX3") }
+                    }
                 }
                 Button(
                     onClick = {
