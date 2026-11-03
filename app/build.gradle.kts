@@ -11,8 +11,9 @@ android {
 
     defaultConfig {
         applicationId = "com.tahmidgaming.lineageupdater"
-        // Android 6.0 (API 23) is the validated minimum SDK for this codebase.
-        minSdk = 23
+        // Shizuku's current API dependency requires Android 7.0 (API 24), so the app must
+        // match that minimum SDK level to build successfully.
+        minSdk = 24
         targetSdk = 36
         versionCode = 2001
         versionName = "2.0.1"
