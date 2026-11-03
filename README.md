@@ -48,3 +48,17 @@ This project started from the native LineageOS Archive Downloader codebase. The 
 ## License
 
 Apache License 2.0.
+
+## JKM OTA Lab (experimental)
+
+The **JKM OTA Lab** is available from the native Tools tab. It adds:
+- Device/build/CUST detection with editable JKM-LX1, JKM-LX2 and JKM-LX3 profiles.
+- Separate FullOTA searches for a BASE identifier (default `JKM-LGRP2-OVS`) and handset/CUST model.
+- Incremental OTA search with a required installed-source-build field.
+- Experimental discovery tokens for JKM-AL00, JKM-TL00 and JKM-L00, including China C00 candidates when the configured proxy returns them.
+- Shizuku permission detection and a shell handoff to Android's System Update settings.
+- Downloads through the existing native download manager, history and checksum workflow.
+
+The OTA Lab uses the same configured HiSuite Proxy integration as Finder. It does not contain Huawei's private OTS credentials or a first-party Huawei update API. Firmware identifiers and proxy results are candidates, not proof of device compatibility. FullOTA components must match the same release and CUST; incremental OTA must match the installed source build exactly. The source-build field is a user safety check, not an independent Huawei server-side compatibility verification.
+
+Shizuku is used only to request opening System Update settings. It does not grant Huawei's updater permission to accept a local package. No signature checks are bypassed and no protected updater metadata or partitions are modified.
