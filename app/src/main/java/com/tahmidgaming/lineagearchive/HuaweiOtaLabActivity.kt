@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.content.ComponentName
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -113,7 +112,8 @@ class HuaweiOtaLabActivity : ComponentActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, e.message ?: "Shizuku is unavailable", Toast.LENGTH_LONG).show()
         }
-    }}
+    }
+}
 
 @Composable
 private fun JkmOtaLabScreen(
